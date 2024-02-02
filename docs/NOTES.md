@@ -1,13 +1,15 @@
 # Notes
 
-## Installation
+## krunvm
+
+### Installation
 
 To install [krunvm] on Fedora, do as per the [instructions].
 
   [krunvm]: https://github.com/containers/krunvm
   [instructions]: https://github.com/containers/krunvm?tab=readme-ov-file#fedora
 
-## Running
+### Running
 
 Running requires [adding] `buildah unshare` in front of all examples. Calling
 the `create` command will describe that.
@@ -46,7 +48,7 @@ buildah unshare \
 A micro VM is like a container. As soon as the process that was requested to be
 started, e.g. `/bin/bash` ends, the micro VM ends.
 
-## Podman
+### Podman
 
 At the Fedora prompt, inside a running micro VM, install `podman` with the
 following command:
@@ -70,3 +72,43 @@ podman run hello-world
 ```
 
   [edit]: https://github.com/containers/krunvm/issues/30#issuecomment-1214048495
+
+## Runner
+
+### Docker Images
+
+The [project] makes available a number of docker [images]. However, these
+contain docker-in-docker, which will not work in micro VMs.
+
+  [project]: https://github.com/myoung34/docker-github-actions-runner
+  [images]: https://hub.docker.com/r/myoung34/github-runner
+
+#### Base Image
+
+The images are built out of a [base] (Debian-derivative) image. The GitHub
+workflow will automatically change the `FROM` image to build them on top of
+Debian or Ubuntu. The base image contains a number of software, worth
+mentioning:
+
++ `git` is installed at its latest version possible, together with LFS.
++ The `aws-cli` is downloaded as a `zip` (meaning `unzip` needs to be present).
++ The entire `docker` is installed and `docker-compose` is manually alias to
+  running the `compose` plugin with the `--compatibility` flag turned on.
++ `podman`, `buildah` and `skopeo` are installed
++ The `gh` (GitHub) CLI is installed at its latest version
++ `yq`
+
+And the image arranges for a user called `runner` to be present and to be able
+to `sudo`. The user is also made part of the `docker` group (so that it can
+create containers)
+
+  [base]: https://github.com/myoung34/docker-github-actions-runner/blob/master/Dockerfile.base
+
+#### Main Image
+
+The [main] image will add the runner and the various scripts from the project.
+It finishes by running the [entrypoint] which will prepare stuff and finally run
+the runner (sic). In most cases, the runner will be run as the `runner` user.
+
+  [main]: https://github.com/myoung34/docker-github-actions-runner/blob/master/Dockerfile
+  [entrypoint]: https://github.com/myoung34/docker-github-actions-runner/blob/master/entrypoint.sh
