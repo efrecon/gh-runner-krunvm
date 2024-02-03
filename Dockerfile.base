@@ -1,0 +1,10 @@
+# syntax=docker/dockerfile:1
+ARG FEDORA_VERSION=39
+FROM fedora:${FEDORA_VERSION}
+
+ARG INSTALL_NAMESPACE=/opt/gh-runner-krunvm
+
+COPY ./base/base.sh ${INSTALL_NAMESPACE}/bin/base.sh
+RUN chmod a+x "${INSTALL_NAMESPACE}/bin/base.sh" \
+    && "${INSTALL_NAMESPACE}/bin/base.sh" -dv
+COPY ./root /
