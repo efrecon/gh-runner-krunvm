@@ -83,6 +83,11 @@ contain docker-in-docker, which will not work in micro VMs.
   [project]: https://github.com/myoung34/docker-github-actions-runner
   [images]: https://hub.docker.com/r/myoung34/github-runner
 
+Note that while these images have `podman` installed, there are packages
+missing, meaning that running `podman info` will fail. Since `podman` usually
+works better in Fedora, using it as a base for the runners is probably a better
+bet.
+
 #### Base Image
 
 The images are built out of a [base] (Debian-derivative) image. The GitHub
