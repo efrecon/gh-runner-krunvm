@@ -4,7 +4,7 @@ FROM fedora:${FEDORA_VERSION}
 
 ARG INSTALL_NAMESPACE=/opt/gh-runner-krunvm
 
-COPY ./base/base.sh ${INSTALL_NAMESPACE}/bin/base.sh
+COPY base/base.sh ${INSTALL_NAMESPACE}/bin/base.sh
 RUN chmod a+x "${INSTALL_NAMESPACE}/bin/base.sh" \
-    && "${INSTALL_NAMESPACE}/bin/base.sh" -dv
-COPY ./root /
+    && "${INSTALL_NAMESPACE}/bin/base.sh" -dv -l /dev/stdout
+COPY base/root/ /

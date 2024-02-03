@@ -10,6 +10,9 @@ BASE_VERBOSE=${BASE_VERBOSE:-0}
 # Should we install the docker CLI?
 BASE_DOCKER=${BASE_DOCKER:-0}
 
+# Where to send logs
+BASE_LOG=${BASE_LOG:-2}
+
 BASE_USER=${BASE_USER:-runner}
 BASE_UID=${BASE_UID:-1001}
 BASE_GROUP=${BASE_GROUP:-runner}
@@ -28,10 +31,12 @@ usage() {
   exit "${1:-0}"
 }
 
-while getopts "dvh-" opt; do
+while getopts "dl:vh-" opt; do
   case "$opt" in
     d) # Install docker
       BASE_DOCKER=1;;
+    l) # Where to send logs
+      BASE_LOG="$OPTARG";;
     v) # Increase verbosity, will otherwise log on errors/warnings only
       BASE_VERBOSE=$((BASE_VERBOSE+1));;
     h) # Print help and exit
@@ -51,7 +56,7 @@ _log() {
     "${2:-LOG}" \
     "$(date +'%Y%m%d-%H%M%S')" \
     "${1:-}" \
-    >&2
+    >&"$BASE_LOG"
 }
 trace() { if [ "${BASE_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
 debug() { if [ "${BASE_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
