@@ -3,6 +3,29 @@
 # Shell sanity. Stop on errors and undefined variables.
 set -eu
 
+
+# This is a readlink -f implementation so this script can (perhaps) run on MacOS
+abspath() {
+  is_abspath() {
+    case "$1" in
+      /* | ~*) true;;
+      *) false;;
+    esac
+  }
+
+  if [ -d "$1" ]; then
+    ( cd -P -- "$1" && pwd -P )
+  elif [ -L "$1" ]; then
+    if is_abspath "$(readlink "$1")"; then
+      abspath "$(readlink "$1")"
+    else
+      abspath "$(dirname "$1")/$(readlink "$1")"
+    fi
+  else
+    printf %s\\n "$(abspath "$(dirname "$1")")/$(basename "$1")"
+  fi
+}
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 BASE_VERBOSE=${BASE_VERBOSE:-0}
@@ -20,6 +43,11 @@ BASE_GID=${BASE_GID:-121}
 
 # Name of the "sudo" group
 BASE_SUDO=${BASE_SUDO:-"wheel"}
+
+# Resolve the root directory hosting this script to an absolute path, symbolic
+# links resolved.
+BASE_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+BASE_DOCKER_WRAPPER=${BASE_DOCKER_WRAPPER:-$BASE_ROOTDIR/docker.sh}
 
 usage() {
   # This uses the comments behind the options to show the help. Not extremly
@@ -64,6 +92,20 @@ verbose() { if [ "${BASE_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
 warn() { _log "$1" WRN; }
 error() { _log "$1" ERR && exit 1; }
 
+# Find the executable passed as an argument in the PATH variable and print it.
+find_exec() {
+  while IFS= read -r dir; do
+    if [ -n "${dir}" ] && [ -d "${dir}" ]; then
+      if [ -x "${dir%/}/$1" ] && [ "${dir%/}/$1" != "$(abspath "$0")" ]; then
+        printf %s\\n "${dir%/}/$1"
+        break
+      fi
+    fi
+  done <<EOF
+$(printf %s\\n "$PATH"|tr ':' '\n')
+EOF
+}
+
 # TODO: one of gosu or su-exec to drop privileges and run as the `runner` user
 # TODO: locales?
 verbose "Installing base packages"
@@ -91,6 +133,7 @@ dnf -y install \
   python3-virtualenv \
   python3 \
   dumb-init \
+  procps \
   nodejs \
   rsync \
   libpq-devel \
@@ -104,6 +147,16 @@ if [ "$BASE_DOCKER" = "1" ]; then
   verbose "Installing docker"
   dnf -y config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
   dnf -y install docker-ce-cli
+
+  # Replace the real docker binary with our wrapper so we will be able to force
+  # running containers on the host network.
+  docker=$(find_exec docker)
+  if [ -z "${docker:-}" ]; then
+    error "No docker binary found in PATH"
+  fi
+  mv -f "$docker" "${docker}.orig"
+  verbose "Moved regular docker client to ${docker}.orig, installing wrapper from $BASE_DOCKER_WRAPPER instead"
+  mv -f "$BASE_DOCKER_WRAPPER" "$docker"
 fi
 
 verbose "Installing gh CLI"
