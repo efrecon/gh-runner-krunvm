@@ -58,7 +58,7 @@ jobs:
           inside=$(printf %s\\n "$platforms" | sed -E -e 's/,/\", \"/g' -e 's/\" +/\"/g' -e 's/ +\"/\"/g')
           printf 'platforms=["%s"]\n' "$inside" >> $GITHUB_OUTPUT
       -
-        name: Generate artifact name
+        name: Generate random run identifier
         id: run-id
         run: |
           random_string() {
