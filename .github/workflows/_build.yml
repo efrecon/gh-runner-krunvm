@@ -44,7 +44,7 @@ env:
   REGISTRY_IMAGE: ${{inputs.registry }}/${{ inputs.image }}
 
 jobs:
-  convert:
+  prepare:
     runs-on: ${{ inputs.runs-on }}
     outputs:
       platforms: ${{ steps.convert.outputs.platforms }}
@@ -69,11 +69,11 @@ jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
     needs:
-      - convert
+      - prepare
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ fromJSON(needs.convert.outputs.platforms) }}
+        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
     steps:
       -
         name: Prepare
@@ -123,7 +123,7 @@ jobs:
         name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ needs.convert.outputs.run-id }}-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ needs.prepare.outputs.run-id }}-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -132,14 +132,14 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
-      - convert
+      - prepare
     steps:
       -
         name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
-          pattern: digests-${{ needs.convert.outputs.run-id }}-*
+          pattern: digests-${{ needs.prepare.outputs.run-id }}-*
           merge-multiple: true
       -
         name: Set up Docker Buildx
