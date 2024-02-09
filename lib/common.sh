@@ -48,17 +48,19 @@ usage() {
 
 # PML: Poor Man's Logging
 _log() {
+  # Capture level and shift it away, rest will be passed blindly to printf
+  _lvl=${1:-LOG}; shift
+  # shellcheck disable=SC2059 # We want to expand the format string
   printf '[%s] [%s] [%s] %s\n' \
     "$(basename "$0")" \
-    "${2:-LOG}" \
+    "$_lvl" \
     "$(date +'%Y%m%d-%H%M%S')" \
-    "${1:-}" \
+    "$(printf "$@")" \
     >&"$KRUNVM_RUNNER_LOG"
 }
-trace() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
-debug() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
-verbose() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-info() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-warn() { _log "$1" WRN; }
-error() { _log "$1" ERR && exit 1; }
-
+trace() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "3" ]; then _log TRC "$@"; fi; }
+debug() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "2" ]; then _log DBG "$@"; fi; }
+verbose() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log NFO "$@"; fi; }
+info() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log NFO "$@"; fi; }
+warn() { _log WRN "$@"; }
+error() { _log ERR "$@" && exit 1; }
