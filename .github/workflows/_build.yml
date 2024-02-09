@@ -32,6 +32,10 @@ on:
         required: false
         type: string
         default: 'ghcr.io'
+      build-args:
+        description: "List of build-time variables"
+        required: false
+        type: string
     secrets:
       username:
         description: 'username at registry'
@@ -39,7 +43,34 @@ on:
       password:
         description: 'password at registry'
         required: true
-
+    outputs:
+      version:
+        description: 'Generated Docker image version'
+        value: ${{ jobs.merge.outputs.version }}
+      tags:
+        description: 'Generated Docker tags'
+        value: ${{ jobs.merge.outputs.tags }}
+      labels:
+        description: 'Generated Docker labels'
+        value: ${{ jobs.merge.outputs.labels }}
+      annotations:
+        description: 'Generated annotations'
+        value: ${{ jobs.merge.outputs.annotations }}
+      json:
+        description: 'JSON output of tags and labels'
+        value: ${{ jobs.merge.outputs.json }}
+      bake-file-tags:
+        description: 'Bake definition file with tags'
+        value: ${{ jobs.merge.outputs.bake-file-tags }}
+      bake-file-labels:
+        description: 'Bake definition file with labels'
+        value: ${{ jobs.merge.outputs.bake-file-labels }}
+      bake-file-annotations:
+        description: 'Bake definiton file with annotations'
+        value: ${{ jobs.merge.outputs.bake-file-annotations }}
+      bake-file:
+        description: 'Bake definition file with tags and labels'
+        value: ${{ jobs.merge.outputs.bake-file }}
 env:
   REGISTRY_IMAGE: ${{inputs.registry }}/${{ inputs.image }}
 
@@ -113,6 +144,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           file: ${{ inputs.file }}
+          build-args: ${{ inputs.build-args }}
       -
         name: Export digest
         run: |
@@ -133,6 +165,16 @@ jobs:
     needs:
       - build
       - prepare
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      annotations: ${{ steps.meta.outputs.annotations }}
+      json: ${{ steps.meta.outputs.json }}
+      bake-file-tags: ${{ steps.meta.outputs.bake-file-tags }}
+      bake-file-labels: ${{ steps.meta.outputs.bake-file-labels }}
+      bake-file-annotations: ${{ steps.meta.outputs.bake-file-annotations }}
+      bake-file: ${{ steps.meta.outputs.bake-file }}
     steps:
       -
         name: Download digests

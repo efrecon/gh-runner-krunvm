@@ -1,4 +1,6 @@
-FROM ghcr.io/efrecon/runner-krunvm-base:main
+# syntax=docker/dockerfile:1
+ARG VERSION=main
+FROM ghcr.io/efrecon/runner-krunvm-base:${VERSION}
 
 ARG INSTALL_VERSION=latest
 ARG INSTALL_NAMESPACE=/opt/gh-runner-krunvm

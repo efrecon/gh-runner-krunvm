@@ -23,6 +23,8 @@ jobs:
     with:
       image: ${{ github.actor }}/runner-krunvm
       file: Dockerfile
+      build-args: |
+        VERSION=${{ needs.build-base.outputs.version }}
     secrets:
       username: ${{ github.actor }}
       password: ${{ secrets.GITHUB_TOKEN }}
