@@ -1,7 +1,7 @@
 name: multi-platform build
 
 on:
-  worfklow_call:
+  workflow_call:
     inputs:
       image:
         description: 'Base image to build'
