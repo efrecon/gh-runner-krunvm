@@ -42,7 +42,7 @@ jobs:
   convert:
     runs-on: ${{ inputs.runs-on }}
     outputs:
-      platforms: ${{ steps.convert.outputs.platforms }}
+      platforms: ${{ fromJson(steps.convert.outputs.platforms) }}
     steps:
       -
         name: Convert Platforms
