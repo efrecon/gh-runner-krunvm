@@ -42,7 +42,7 @@ jobs:
   convert:
     runs-on: ${{ inputs.runs-on }}
     outputs:
-      platforms: ${{ fromJson(steps.convert.outputs.platforms) }}
+      platforms: ${{ steps.convert.outputs.platforms }}
     steps:
       -
         name: Convert Platforms
@@ -59,13 +59,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        platform: ${{ needs.convert.outputs.platforms }}
+        platform: ${{ fromJSON(needs.convert.outputs.platforms) }}
     steps:
       -
         name: Prepare
         id: platform
         run: |
-          platform=${{ needs.convert.outputs.platforms }}
+          platform=${{ fromJSON(needs.convert.outputs.platforms) }}
           echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
       -
         name: Checkout
@@ -95,7 +95,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          platforms: ${{ needs.convert.outputs.platforms }}
+          platforms: ${{ fromJSON(needs.convert.outputs.platforms) }}
           labels: ${{ steps.meta.outputs.labels }}
           outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
           file: ${{ inputs.file }}
