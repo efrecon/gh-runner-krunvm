@@ -3,6 +3,28 @@
 # Shell sanity. Stop on errors and undefined variables.
 set -eu
 
+# This is a readlink -f implementation so this script can (perhaps) run on MacOS
+abspath() {
+  is_abspath() {
+    case "$1" in
+      /* | ~*) true;;
+      *) false;;
+    esac
+  }
+
+  if [ -d "$1" ]; then
+    ( cd -P -- "$1" && pwd -P )
+  elif [ -L "$1" ]; then
+    if is_abspath "$(readlink "$1")"; then
+      abspath "$(readlink "$1")"
+    else
+      abspath "$(dirname "$1")/$(readlink "$1")"
+    fi
+  else
+    printf %s\\n "$(abspath "$(dirname "$1")")/$(basename "$1")"
+  fi
+}
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 INSTALL_VERBOSE=${INSTALL_VERBOSE:-0}
@@ -24,15 +46,15 @@ INSTALL_DIRECTORIES=${INSTALL_DIRECTORIES:-"/_work $INSTALL_TOOL_CACHE $INSTALL_
 # User to change ownership of directories to
 INSTALL_USER=${INSTALL_USER:-runner}
 
-usage() {
-  # This uses the comments behind the options to show the help. Not extremly
-  # correct, but effective and simple.
-  echo "$0 install the GitHub runner" && \
-    grep "[[:space:]].)\ #" "$0" |
-    sed 's/#//' |
-    sed -r 's/([a-z-])\)/-\1/'
-  exit "${1:-0}"
-}
+# Resolve the root directory hosting this script to an absolute path, symbolic
+# links resolved.
+INSTALL_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+
+# shellcheck source=../lib/common.sh
+. "$INSTALL_ROOTDIR/../lib/common.sh"
+
+# shellcheck disable=SC2034 # Used in sourced scripts
+KRUNVM_RUNNER_MAIN="Install the GitHub runner"
 
 while getopts "l:u:vh-" opt; do
   case "$opt" in
@@ -52,20 +74,9 @@ while getopts "l:u:vh-" opt; do
 done
 shift $((OPTIND-1))
 
-# PML: Poor Man's Logging
-_log() {
-  printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
-    "${2:-LOG}" \
-    "$(date +'%Y%m%d-%H%M%S')" \
-    "${1:-}" \
-    >&"$INSTALL_LOG"
-}
-trace() { if [ "${INSTALL_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
-debug() { if [ "${INSTALL_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
-verbose() { if [ "${INSTALL_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-warn() { _log "$1" WRN; }
-error() { _log "$1" ERR && exit 1; }
+# Pass logging configuration and level to imported scripts
+KRUNVM_RUNNER_LOG=$INSTALL_LOG
+KRUNVM_RUNNER_VERBOSE=$INSTALL_VERBOSE
 
 # Collect the version to install from the environment or the first argument.
 INSTALL_VERSION=${INSTALL_VERSION:-${1:-latest}}

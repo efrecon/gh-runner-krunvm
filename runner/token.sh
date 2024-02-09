@@ -3,6 +3,32 @@
 # Shell sanity. Stop on errors and undefined variables.
 set -eu
 
+# This is a readlink -f implementation so this script can (perhaps) run on MacOS
+abspath() {
+  is_abspath() {
+    case "$1" in
+      /* | ~*) true;;
+      *) false;;
+    esac
+  }
+
+  if [ -d "$1" ]; then
+    ( cd -P -- "$1" && pwd -P )
+  elif [ -L "$1" ]; then
+    if is_abspath "$(readlink "$1")"; then
+      abspath "$(readlink "$1")"
+    else
+      abspath "$(dirname "$1")/$(readlink "$1")"
+    fi
+  else
+    printf %s\\n "$(abspath "$(dirname "$1")")/$(basename "$1")"
+  fi
+}
+
+# Resolve the root directory hosting this script to an absolute path, symbolic
+# links resolved.
+TOKEN_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 TOKEN_VERBOSE=${TOKEN_VERBOSE:-0}
@@ -10,27 +36,27 @@ TOKEN_VERBOSE=${TOKEN_VERBOSE:-0}
 # Where to send logs
 TOKEN_LOG=${TOKEN_LOG:-2}
 
+# GitHub host, e.g. github.com or github.example.com
 TOKEN_GITHUB=${TOKEN_GITHUB:-"github.com"}
 
+# Version of the GitHub API to use
 TOKEN_API_VERSION=${TOKEN_API_VERSION:-"v3"}
 
+# PAT to acquire the runner token with
 TOKEN_PAT=${TOKEN_PAT:-""}
 
+# Scope of the runner, one of: repo, org or enterprise
 TOKEN_SCOPE=${TOKEN_SCOPE:-"repo"}
 
 # Name of organisation, enterprise or repo to attach the runner to, when
 # relevant scope.
 TOKEN_PRINCIPAL=${TOKEN_PRINCIPAL:-""}
 
-usage() {
-  # This uses the comments behind the options to show the help. Not extremly
-  # correct, but effective and simple.
-  echo "$0 install the GitHub runner" && \
-    grep "[[:space:]].) #" "$0" |
-    sed 's/#//' |
-    sed -r 's/([a-zA-Z-])\)/-\1/'
-  exit "${1:-0}"
-}
+# shellcheck source=../lib/common.sh
+. "$TOKEN_ROOTDIR/../lib/common.sh"
+
+# shellcheck disable=SC2034 # Used in sourced scripts
+KRUNVM_RUNNER_MAIN="Acquire a runner token from GitHub API"
 
 while getopts "g:l:p:s:T:vh-" opt; do
   case "$opt" in
@@ -56,20 +82,9 @@ while getopts "g:l:p:s:T:vh-" opt; do
 done
 shift $((OPTIND-1))
 
-# PML: Poor Man's Logging
-_log() {
-  printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
-    "${2:-LOG}" \
-    "$(date +'%Y%m%d-%H%M%S')" \
-    "${1:-}" \
-    >&"$TOKEN_LOG"
-}
-trace() { if [ "${TOKEN_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
-debug() { if [ "${TOKEN_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
-verbose() { if [ "${TOKEN_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-warn() { _log "$1" WRN; }
-error() { _log "$1" ERR && exit 1; }
+# Pass logging configuration and level to imported scripts
+KRUNVM_RUNNER_LOG=$TOKEN_LOG
+KRUNVM_RUNNER_VERBOSE=$TOKEN_VERBOSE
 
 if [ -z "$TOKEN_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"

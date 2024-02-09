@@ -26,11 +26,6 @@ abspath() {
   fi
 }
 
-# shellcheck disable=SC2120 # Function has good default.
-random_string() {
-  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-12}"
-}
-
 # Resolve the root directory hosting this script to an absolute path, symbolic
 # links resolved.
 RUNNER_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
@@ -57,7 +52,7 @@ RUNNER_LABELS=${RUNNER_LABELS:-""}
 # Name of the user to run the runner as, defaults to root. User must exist.
 RUNNER_USER=${RUNNER_USER:-"root"}
 
-# One of repo, org or enterprise
+# Scope of the runner, one of: repo, org or enterprise
 RUNNER_SCOPE=${RUNNER_SCOPE:-"repo"}
 
 # Name of organisation, enterprise or repo to attach the runner to, when
@@ -84,19 +79,14 @@ RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/actions-runner"}
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
-
 RUNNER_TOOL_CACHE=${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtoolcache"}"}
 
+# shellcheck source=../lib/common.sh
+. "$RUNNER_ROOTDIR/../lib/common.sh"
 
-usage() {
-  # This uses the comments behind the options to show the help. Not extremly
-  # correct, but effective and simple.
-  echo "$0 configure and run the installed GitHub runner" && \
-    grep "[[:space:]].) #" "$0" |
-    sed 's/#//' |
-    sed -r 's/([a-zA-Z-])\)/-\1/'
-  exit "${1:-0}"
-}
+# shellcheck disable=SC2034 # Used in sourced scripts
+KRUNVM_RUNNER_MAIN="Configure and run the installed GitHub runner"
+
 
 while getopts "eg:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
   case "$opt" in
@@ -136,36 +126,9 @@ while getopts "eg:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
 done
 shift $((OPTIND-1))
 
-# PML: Poor Man's Logging
-_log() {
-  printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
-    "${2:-LOG}" \
-    "$(date +'%Y%m%d-%H%M%S')" \
-    "${1:-}" \
-    >&"$RUNNER_LOG"
-}
-trace() { if [ "${RUNNER_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
-debug() { if [ "${RUNNER_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
-verbose() { if [ "${RUNNER_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-warn() { _log "$1" WRN; }
-error() { _log "$1" ERR && exit 1; }
-
-# shellcheck disable=SC2120 # Take none or one argument
-to_lower() {
-  if [ -z "${1:-}" ]; then
-    tr '[:upper:]' '[:lower:]'
-  else
-    printf %s\\n "$1" | to_lower
-  fi
-}
-
-is_true() {
-  case "$(to_lower "${1:-}")" in
-    1 | true | yes | y | on | t) return 0;;
-    *) return 1;;
-  esac
-}
+# Pass logging configuration and level to imported scripts
+KRUNVM_RUNNER_LOG=$RUNNER_LOG
+KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
 
 configure() {
   verbose "Registering $RUNNER_SCOPE runner '$RUNNER_NAME' for $RUNNER_URL"
@@ -230,20 +193,6 @@ unregister() {
   RUNNER_ALLOW_RUNASROOT=1 "$RUNNER_INSTALL/config.sh" remove --token "$RUNNER_TOKEN"
 }
 
-
-# Find the executable passed as an argument in the PATH variable and print it.
-find_exec() {
-  while IFS= read -r dir; do
-    if [ -n "${dir}" ] && [ -d "${dir}" ]; then
-      if [ -x "${dir%/}/$1" ] && [ "${dir%/}/$1" != "$(abspath "$0")" ]; then
-        printf %s\\n "${dir%/}/$1"
-        break
-      fi
-    fi
-  done <<EOF
-$(printf %s\\n "$PATH"|tr ':' '\n')
-EOF
-}
 
 runas() {
   if [ "$(id -u)" = "0" ]; then

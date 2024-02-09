@@ -41,23 +41,20 @@ BASE_UID=${BASE_UID:-1001}
 BASE_GROUP=${BASE_GROUP:-runner}
 BASE_GID=${BASE_GID:-121}
 
-# Name of the "sudo" group
+# Name of the "sudo" group - wheel on Fedora, sudo on Ubuntu
 BASE_SUDO=${BASE_SUDO:-"wheel"}
 
 # Resolve the root directory hosting this script to an absolute path, symbolic
 # links resolved.
 BASE_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+
 BASE_DOCKER_WRAPPER=${BASE_DOCKER_WRAPPER:-$BASE_ROOTDIR/docker.sh}
 
-usage() {
-  # This uses the comments behind the options to show the help. Not extremly
-  # correct, but effective and simple.
-  echo "$0 installs a base GitHub runner environment in Fedora" && \
-    grep "[[:space:]].)\ #" "$0" |
-    sed 's/#//' |
-    sed -r 's/([a-z-])\)/-\1/'
-  exit "${1:-0}"
-}
+# shellcheck source=../lib/common.sh
+. "$BASE_ROOTDIR/../lib/common.sh"
+
+# shellcheck disable=SC2034 # Used in sourced scripts
+KRUNVM_RUNNER_MAIN="Install a base GitHub runner environment in Fedora"
 
 while getopts "dl:vh-" opt; do
   case "$opt" in
@@ -77,36 +74,10 @@ while getopts "dl:vh-" opt; do
 done
 shift $((OPTIND-1))
 
-# PML: Poor Man's Logging
-_log() {
-  printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
-    "${2:-LOG}" \
-    "$(date +'%Y%m%d-%H%M%S')" \
-    "${1:-}" \
-    >&"$BASE_LOG"
-}
-trace() { if [ "${BASE_VERBOSE:-0}" -ge "3" ]; then _log "$1" TRC; fi; }
-debug() { if [ "${BASE_VERBOSE:-0}" -ge "2" ]; then _log "$1" DBG; fi; }
-verbose() { if [ "${BASE_VERBOSE:-0}" -ge "1" ]; then _log "$1" NFO; fi; }
-warn() { _log "$1" WRN; }
-error() { _log "$1" ERR && exit 1; }
+# Pass logging configuration and level to imported scripts
+KRUNVM_RUNNER_LOG=$BASE_LOG
+KRUNVM_RUNNER_VERBOSE=$BASE_VERBOSE
 
-# Find the executable passed as an argument in the PATH variable and print it.
-find_exec() {
-  while IFS= read -r dir; do
-    if [ -n "${dir}" ] && [ -d "${dir}" ]; then
-      if [ -x "${dir%/}/$1" ] && [ "${dir%/}/$1" != "$(abspath "$0")" ]; then
-        printf %s\\n "${dir%/}/$1"
-        break
-      fi
-    fi
-  done <<EOF
-$(printf %s\\n "$PATH"|tr ':' '\n')
-EOF
-}
-
-# TODO: one of gosu or su-exec to drop privileges and run as the `runner` user
 # TODO: locales?
 verbose "Installing base packages"
 dnf -y install \
