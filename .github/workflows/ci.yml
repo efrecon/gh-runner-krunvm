@@ -7,11 +7,22 @@ on:
       - feature/build-two-images
 
 jobs:
-  build:
+  build-base:
     uses: ./.github/workflows/_build.yml
     with:
       image: ghcr.io/${{ github.actor }}/runner-krunvm-base
       file: Dockerfile.base
+    secrets:
+      username: ${{ github.actor }}
+      password: ${{ secrets.GITHUB_TOKEN }}
+
+  build-main:
+    needs:
+      - build-base
+    uses: ./.github/workflows/_build.yml
+    with:
+      image: ghcr.io/${{ github.actor }}/runner-krunvm
+      file: Dockerfile
     secrets:
       username: ${{ github.actor }}
       password: ${{ secrets.GITHUB_TOKEN }}
