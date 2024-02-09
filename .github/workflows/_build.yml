@@ -27,6 +27,11 @@ on:
         required: false
         type: string
         default: 'linux/amd64,linux/arm64'
+      registry:
+        description: 'Registry to push to'
+        required: false
+        type: string
+        default: 'ghcr.io'
     secrets:
       username:
         description: 'username at registry'
@@ -36,13 +41,14 @@ on:
         required: true
 
 env:
-  REGISTRY_IMAGE: ${{ inputs.image }}
+  REGISTRY_IMAGE: ${{inputs.registry }}/${{ inputs.image }}
 
 jobs:
   convert:
     runs-on: ${{ inputs.runs-on }}
     outputs:
       platforms: ${{ steps.convert.outputs.platforms }}
+      run-id: ${{ steps.run-id.outputs.run-id }}
     steps:
       -
         name: Convert Platforms
@@ -50,7 +56,15 @@ jobs:
         run: |
           platforms=${{ inputs.platforms }}
           inside=$(printf %s\\n "$platforms" | sed -E -e 's/,/\", \"/g' -e 's/\" +/\"/g' -e 's/ +\"/\"/g')
-          printf 'platforms=["%s"]' "$inside" >> $GITHUB_OUTPUT
+          printf 'platforms=["%s"]\n' "$inside" >> $GITHUB_OUTPUT
+      -
+        name: Generate artifact name
+        id: run-id
+        run: |
+          random_string() {
+            LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-12}"
+          }
+          printf 'run-id=%s\n' "$(random_string)" >> $GITHUB_OUTPUT
 
   build:
     runs-on: ${{ inputs.runs-on }}
@@ -86,7 +100,7 @@ jobs:
         name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ inputs.registry }}
           username: ${{ secrets.username }}
           password: ${{ secrets.password }}
       -
@@ -109,7 +123,7 @@ jobs:
         name: Upload digest
         uses: actions/upload-artifact@v4
         with:
-          name: digests-${{ env.PLATFORM_PAIR }}
+          name: digests-${{ needs.convert.outputs.run-id }}-${{ env.PLATFORM_PAIR }}
           path: /tmp/digests/*
           if-no-files-found: error
           retention-days: 1
@@ -118,13 +132,14 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - build
+      - convert
     steps:
       -
         name: Download digests
         uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
-          pattern: digests-*
+          pattern: digests-${{ needs.convert.outputs.run-id }}-*
           merge-multiple: true
       -
         name: Set up Docker Buildx
@@ -139,7 +154,7 @@ jobs:
         name: Login to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ghcr.io
+          registry: ${{ inputs.registry }}
           username: ${{ secrets.username }}
           password: ${{ secrets.password }}
       -

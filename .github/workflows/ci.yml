@@ -10,7 +10,7 @@ jobs:
   build-base:
     uses: ./.github/workflows/_build.yml
     with:
-      image: ghcr.io/${{ github.actor }}/runner-krunvm-base
+      image: ${{ github.actor }}/runner-krunvm-base
       file: Dockerfile.base
     secrets:
       username: ${{ github.actor }}
@@ -21,7 +21,7 @@ jobs:
       - build-base
     uses: ./.github/workflows/_build.yml
     with:
-      image: ghcr.io/${{ github.actor }}/runner-krunvm
+      image: ${{ github.actor }}/runner-krunvm
       file: Dockerfile
     secrets:
       username: ${{ github.actor }}
