@@ -118,7 +118,7 @@ while getopts "eg:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_VERBOSE=$((RUNNER_VERBOSE+1));;
     h) # Print help and exit
       usage;;
-    -) # End of options, everything after are options blindly passed to program before list of files
+    -) # End of options, everything is executed as a command, as relevant user
       break;;
     ?)
       usage 1;;

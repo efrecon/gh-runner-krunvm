@@ -74,8 +74,6 @@ while getopts "g:l:p:s:T:vh-" opt; do
       TOKEN_VERBOSE=$((TOKEN_VERBOSE+1));;
     h) # Print help and exit
       usage;;
-    -) # End of options, everything after are options blindly passed to program before list of files
-      break;;
     ?)
       usage 1;;
   esac

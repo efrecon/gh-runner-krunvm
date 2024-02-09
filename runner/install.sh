@@ -66,8 +66,6 @@ while getopts "l:u:vh-" opt; do
       INSTALL_VERBOSE=$((INSTALL_VERBOSE+1));;
     h) # Print help and exit
       usage;;
-    -) # End of options, everything after are options blindly passed to program before list of files
-      break;;
     ?)
       usage 1;;
   esac
