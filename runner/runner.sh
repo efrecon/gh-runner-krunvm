@@ -209,21 +209,24 @@ runas() {
   fi
 }
 
-if ! [ -x "$RUNNER_ROOTDIR/token.sh" ]; then
-  error "No token script found"
-fi
+check_command "$RUNNER_ROOTDIR/token.sh"
 if [ -z "$RUNNER_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"
 fi
 
+if [ "$#" = 0 ]; then
+  warn "No command to run, will take defaults"
+  set -- /opt/actions-runner/bin/Runner.Listener run --startuptype service
+fi
+
 debug "Setting up missing defaults"
-[ -f "/etc/os-release" ] && . /etc/os-release
-RUNNER_DISTRO=${RUNNER_DISTRO:-"${ID:-"unknown}"}"}
+distro=$(get_release "ID")
+RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
 RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
 RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_NAME_PREFIX}-$(random_string)"}
 
 RUNNER_WORKDIR=${RUNNER_WORKDIR:-"/_work/${RUNNER_NAME}"}
-if [ -n "${ID:-}" ]; then
+if [ -n "${distro:-}" ]; then
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm,${RUNNER_DISTRO}"}
 else
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
@@ -278,6 +281,7 @@ if is_true "$RUNNER_DOCKER"; then
   fi
 fi
 
+verbose "Starting runner as '$RUNNER_USER' (id=$(id -un)): $*"
 case "$RUNNER_USER" in
   root)
     if [ "$(id -u)" = "0" ]; then
