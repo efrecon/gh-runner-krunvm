@@ -1,0 +1,211 @@
+name: multi-platform build
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: 'Base image to build'
+        required: true
+        type: string
+      file:
+        description: 'Dockerfile to use'
+        required: false
+        type: string
+        default: 'Dockerfile'
+      context:
+        description: 'Build context'
+        required: false
+        type: string
+        default: '.'
+      runs-on:
+        description: 'Runner to use'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      platforms:
+        description: 'Platforms to build for, comma separated list of arch/os pairs'
+        required: false
+        type: string
+        default: 'linux/amd64,linux/arm64'
+      registry:
+        description: 'Registry to push to'
+        required: false
+        type: string
+        default: 'ghcr.io'
+      build-args:
+        description: "List of build-time variables"
+        required: false
+        type: string
+    secrets:
+      username:
+        description: 'username at registry'
+        required: true
+      password:
+        description: 'password at registry'
+        required: true
+    outputs:
+      version:
+        description: 'Generated Docker image version'
+        value: ${{ jobs.merge.outputs.version }}
+      tags:
+        description: 'Generated Docker tags'
+        value: ${{ jobs.merge.outputs.tags }}
+      labels:
+        description: 'Generated Docker labels'
+        value: ${{ jobs.merge.outputs.labels }}
+      annotations:
+        description: 'Generated annotations'
+        value: ${{ jobs.merge.outputs.annotations }}
+      json:
+        description: 'JSON output of tags and labels'
+        value: ${{ jobs.merge.outputs.json }}
+      bake-file-tags:
+        description: 'Bake definition file with tags'
+        value: ${{ jobs.merge.outputs.bake-file-tags }}
+      bake-file-labels:
+        description: 'Bake definition file with labels'
+        value: ${{ jobs.merge.outputs.bake-file-labels }}
+      bake-file-annotations:
+        description: 'Bake definiton file with annotations'
+        value: ${{ jobs.merge.outputs.bake-file-annotations }}
+      bake-file:
+        description: 'Bake definition file with tags and labels'
+        value: ${{ jobs.merge.outputs.bake-file }}
+env:
+  REGISTRY_IMAGE: ${{inputs.registry }}/${{ inputs.image }}
+
+jobs:
+  prepare:
+    runs-on: ${{ inputs.runs-on }}
+    outputs:
+      platforms: ${{ steps.convert.outputs.platforms }}
+      run-id: ${{ steps.run-id.outputs.run-id }}
+    steps:
+      -
+        name: Convert Platforms
+        id: convert
+        run: |
+          platforms=${{ inputs.platforms }}
+          inside=$(printf %s\\n "$platforms" | sed -E -e 's/,/\", \"/g' -e 's/\" +/\"/g' -e 's/ +\"/\"/g')
+          printf 'platforms=["%s"]\n' "$inside" >> $GITHUB_OUTPUT
+      -
+        name: Generate random run identifier
+        id: run-id
+        run: |
+          random_string() {
+            LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-12}"
+          }
+          printf 'run-id=%s\n' "$(random_string)" >> $GITHUB_OUTPUT
+
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    needs:
+      - prepare
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: ${{ fromJSON(needs.prepare.outputs.platforms) }}
+    steps:
+      -
+        name: Prepare
+        id: platform
+        run: |
+          platform=${{ matrix.platform }}
+          echo "PLATFORM_PAIR=${platform//\//-}" >> $GITHUB_ENV
+      -
+        name: Checkout
+        uses: actions/checkout@v4
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+      -
+        name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.username }}
+          password: ${{ secrets.password }}
+      -
+        name: Build and push by digest
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: ${{ inputs.platforms }}
+          labels: ${{ steps.meta.outputs.labels }}
+          outputs: type=image,name=${{ env.REGISTRY_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          file: ${{ inputs.file }}
+          build-args: ${{ inputs.build-args }}
+      -
+        name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          digest="${{ steps.build.outputs.digest }}"
+          touch "/tmp/digests/${digest#sha256:}"
+      -
+        name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ needs.prepare.outputs.run-id }}-${{ env.PLATFORM_PAIR }}
+          path: /tmp/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    runs-on: ubuntu-latest
+    needs:
+      - build
+      - prepare
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tags: ${{ steps.meta.outputs.tags }}
+      labels: ${{ steps.meta.outputs.labels }}
+      annotations: ${{ steps.meta.outputs.annotations }}
+      json: ${{ steps.meta.outputs.json }}
+      bake-file-tags: ${{ steps.meta.outputs.bake-file-tags }}
+      bake-file-labels: ${{ steps.meta.outputs.bake-file-labels }}
+      bake-file-annotations: ${{ steps.meta.outputs.bake-file-annotations }}
+      bake-file: ${{ steps.meta.outputs.bake-file }}
+    steps:
+      -
+        name: Download digests
+        uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digests-${{ needs.prepare.outputs.run-id }}-*
+          merge-multiple: true
+      -
+        name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      -
+        name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY_IMAGE }}
+      -
+        name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ secrets.username }}
+          password: ${{ secrets.password }}
+      -
+        name: Create manifest list and push
+        working-directory: /tmp/digests
+        run: |
+          docker buildx imagetools create $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf '${{ env.REGISTRY_IMAGE }}@sha256:%s ' *)
+      -
+        name: Inspect image
+        run: |
+          docker buildx imagetools inspect ${{ env.REGISTRY_IMAGE }}:${{ steps.meta.outputs.version }}
