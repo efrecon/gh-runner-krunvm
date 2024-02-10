@@ -42,8 +42,28 @@ usage() {
   echo "$0 -- ${KRUNVM_RUNNER_MAIN:-"Part of the gh-krunvm-runner project"}" && \
     grep "[[:space:]].) #" "$0" |
     sed 's/#//' |
-    sed -r 's/([a-z-])\)/-\1/'
+    sed -r 's/([a-zA-Z-])\)/-\1/'
   exit "${1:-0}"
+}
+
+check_command() {
+  trace "Checking $1 is an accessible command"
+  if ! command -v "$1" >/dev/null 2>&1; then
+    error "Command not found: $1"
+  fi
+}
+
+# Get the value of one variable in os-release. Empty in all error cases
+get_release() (
+  if [ -n "${1:-}" ] && [ -f "/etc/os-release" ]; then
+    . /etc/os-release
+
+    eval printf %s "\$$1" || true
+  fi
+)
+
+run_krunvm() {
+  buildah unshare krunvm "$@"
 }
 
 # PML: Poor Man's Logging
