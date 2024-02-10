@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - feature/build-two-images
 
 jobs:
   build-base:
