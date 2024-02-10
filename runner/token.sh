@@ -87,6 +87,7 @@ KRUNVM_RUNNER_VERBOSE=$TOKEN_VERBOSE
 if [ -z "$TOKEN_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"
 fi
+check_command jq
 
 # Set the API URL based on the GitHub host
 if [ "$TOKEN_GITHUB" = "github.com" ]; then
