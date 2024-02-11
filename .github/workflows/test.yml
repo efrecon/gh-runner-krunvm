@@ -15,4 +15,4 @@ jobs:
           filter: blob:none
       - name: Test Environment
         run: |
-          env
+          env | grep -oE '^RUNNER_[A-Z_]+='
