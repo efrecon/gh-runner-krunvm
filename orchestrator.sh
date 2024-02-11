@@ -39,15 +39,33 @@ ORCHESTRATOR_LOG=${ORCHESTRATOR_LOG:-2}
 # Name of the OCI image (fully-qualified) to use. You need to have access.
 ORCHESTRATOR_IMAGE=${ORCHESTRATOR_IMAGE:-"ghcr.io/efrecon/runner-krunvm:main"}
 
+# Memory to allocate to the VM (in MB). Regular runners use more than the
+# default.
 ORCHESTRATOR_MEMORY=${ORCHESTRATOR_MEMORY:-"1024"}
+
+# Number of vCPUs to allocate to the VM. Regular runners use more than the
+# default.
 ORCHESTRATOR_CPUS=${ORCHESTRATOR_CPUS:-"2"}
 
+# Name of the VM to create (krunvm create)
 ORCHESTRATOR_NAME=${ORCHESTRATOR_NAME:-"runner"}
 
+# DNS to use on the VM. This is the same as the default in krunvm.
 ORCHESTRATOR_DNS=${ORCHESTRATOR_DNS:-"1.1.1.1"}
 
+# Host->VM mount points, pairs of directories separated by a colon.
 ORCHESTRATOR_MOUNT=${ORCHESTRATOR_MOUNT:-""}
 
+# Name of top directory in VM where to host a copy of the root directory of this
+# script. When this is set, the runner starter script from that directory will
+# be used -- instead of the one already in the OCI image. This option is mainly
+# usefull for development and testing.
+ORCHESTRATOR_DIR=${ORCHESTRATOR_DIR:-""}
+
+# Should the runner be isolated in its own environment. This will pass all
+# configuration down to the runner starter script as an environment variable to
+# avoid leaking secrets in the command line. The file will be removed as soon as
+# used.
 ORCHESTRATOR_ISOLATION=${ORCHESTRATOR_ISOLATION:-"1"}
 
 # GitHub host, e.g. github.com or github.example.com
@@ -82,12 +100,14 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 KRUNVM_RUNNER_MAIN="Run several krunvm-based GitHub runners on a single host"
 
 
-while getopts "c:d:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       ORCHESTRATOR_CPUS="$OPTARG";;
     d) # DNS server to use in VM
       ORCHESTRATOR_DNS=$OPTARG;;
+    D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
+      ORCHESTRATOR_DIR=$OPTARG;;
     g) # GitHub host, e.g. github.com or github.example.com
       RUNNER_GITHUB="$OPTARG";;
     G) # Group to attach the runners to
@@ -171,7 +191,8 @@ set -- \
   --mem "$ORCHESTRATOR_MEMORY" \
   --dns "$ORCHESTRATOR_DNS" \
   --name "$ORCHESTRATOR_NAME"
-set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_MOUNT}"
+# TODO: Implement mounts
+set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_DIR}"
 if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
   set -- "$@" --volume "${ORCHESTRATOR_ENVIRONMENT}:/_environment"
 fi
@@ -199,7 +220,7 @@ for i in $(seq 1 "$runners"); do
     verbose "Creating runner loop $i"
     "$ORCHESTRATOR_ROOTDIR/runner.sh" \
       -n "$ORCHESTRATOR_NAME" \
-      -M "$ORCHESTRATOR_MOUNT" \
+      -D "$ORCHESTRATOR_DIR" \
       -E "${ORCHESTRATOR_ENVIRONMENT:-}" &
     set -- "$@" "$!"
   fi

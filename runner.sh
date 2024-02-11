@@ -64,6 +64,12 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 # Name of the microVM to run from
 RUNNER_NAME=${RUNNER_NAME:-"runner"}
 
+# Name of top directory in VM where to host a copy of the root directory of this
+# script. When this is set, the runner starter script from that directory will
+# be used -- instead of the one already in the OCI image. This option is mainly
+# usefull for development and testing.
+RUNNER_DIR=${RUNNER_DIR:-""}
+
 RUNNER_MOUNT=${RUNNER_MOUNT:-""}
 
 # Location (at host) where to place environment files for each run.
@@ -76,8 +82,10 @@ RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT:-""}
 KRUNVM_RUNNER_MAIN="Create runners forever using krunvm"
 
 
-while getopts "E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
+while getopts "D:E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
   case "$opt" in
+    D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
+      RUNNER_DIR=$OPTARG;;
     E) # Location (at host) where to place environment files for each run.
       RUNNER_ENVIRONMENT="$OPTARG";;
     g) # GitHub host, e.g. github.com or github.example.com
@@ -118,10 +126,11 @@ KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
 
 # Decide which runner.sh implementation (this is the "entrypoint" of the
 # microVM) to use: the one from the mount point, or the built-in one.
-if [ -z "$RUNNER_MOUNT" ]; then
+if [ -z "$RUNNER_DIR" ]; then
   runner=/opt/gh-runner-krunvm/bin/runner.sh
 else
-  runner=${RUNNER_MOUNT%/}/runner/runner.sh
+  check_command "${RUNNER_ROOTDIR}/runner/runner.sh"
+  runner=${RUNNER_DIR%/}/runner/runner.sh
 fi
 
 while true; do
