@@ -16,3 +16,5 @@ jobs:
       - name: Test Environment
         run: |
           env | grep -oE '^RUNNER_[A-Z_]+='
+          ps -edalf
+
