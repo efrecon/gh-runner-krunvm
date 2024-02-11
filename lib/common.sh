@@ -53,12 +53,16 @@ check_command() {
   fi
 }
 
-# Get the value of one variable in os-release. Empty in all error cases
-get_release() (
-  if [ -n "${1:-}" ] && [ -f "/etc/os-release" ]; then
-    . /etc/os-release
+# Get the value of a variable in an env file. The function enforces sourcing in
+# a separate process to avoid leaking out the sources variables.
+get_env() (
+  if [ "$#" -ge 2 ]; then
+    if [ -f "$1" ]; then
+      # shellcheck disable=SC1090 # We want to source the file. Danger zone!
+      . "$1"
 
-    eval printf %s "\$$1" || true
+      eval printf %s "\$$2" || true
+    fi
   fi
 )
 

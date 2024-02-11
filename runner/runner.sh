@@ -220,7 +220,7 @@ if [ "$#" = 0 ]; then
 fi
 
 debug "Setting up missing defaults"
-distro=$(get_release "ID")
+distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
 RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
 RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_NAME_PREFIX}-$(random_string)"}
