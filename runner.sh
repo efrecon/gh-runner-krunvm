@@ -66,6 +66,9 @@ RUNNER_NAME=${RUNNER_NAME:-"runner"}
 
 RUNNER_MOUNT=${RUNNER_MOUNT:-""}
 
+# Location (at host) where to place environment files for each run.
+RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT:-""}
+
 # shellcheck source=lib/common.sh
 . "$RUNNER_ROOTDIR/lib/common.sh"
 
@@ -73,8 +76,10 @@ RUNNER_MOUNT=${RUNNER_MOUNT:-""}
 KRUNVM_RUNNER_MAIN="Create runners forever using krunvm"
 
 
-while getopts "g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
+while getopts "E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
   case "$opt" in
+    E) # Location (at host) where to place environment files for each run.
+      RUNNER_ENVIRONMENT="$OPTARG";;
     g) # GitHub host, e.g. github.com or github.example.com
       RUNNER_GITHUB="$OPTARG";;
     G) # Group to attach the runner to
@@ -111,16 +116,31 @@ shift $((OPTIND-1))
 KRUNVM_RUNNER_LOG=$RUNNER_LOG
 KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
 
+# Decide which runner.sh implementation (this is the "entrypoint" of the
+# microVM) to use: the one from the mount point, or the built-in one.
 if [ -z "$RUNNER_MOUNT" ]; then
   runner=/opt/gh-runner-krunvm/bin/runner.sh
 else
   runner=${RUNNER_MOUNT%/}/runner/runner.sh
 fi
+
 while true; do
   verbose "Starting microVM $RUNNER_NAME to run an ephemeral GitHub runner"
-  run_krunvm start "$RUNNER_NAME" \
-    "$runner" \
-        -- \
+  if [ -n "$RUNNER_ENVIRONMENT" ]; then
+    # Create an env file with most of the RUNNER_ variables. This works because
+    # the `runner.sh` script that will be called uses the same set of variables.
+    id=$(random_string)
+    verbose "Creating isolation environment ${RUNNER_ENVIRONMENT}/${id}.env"
+    while IFS= read -r varset; do
+      # shellcheck disable=SC2163 # We want to expand the variable
+      printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${id}.env"
+    done <<EOF
+$(set | grep '^RUNNER_' | grep -v -e '^RUNNER_ROOTDIR' -e '^RUNNER_ENVIRONMENT')
+EOF
+
+    set -- -E "/_environment/${id}.env"
+  else
+    set -- \
         -e \
         -g "$RUNNER_GITHUB" \
         -G "$RUNNER_GROUP" \
@@ -129,8 +149,10 @@ while true; do
         -p "$RUNNER_PRINCIPAL" \
         -s "$RUNNER_SCOPE" \
         -T "$RUNNER_PAT" \
-        -u "$RUNNER_USER" \
-        -vv \
-      -- \
-        /opt/actions-runner/bin/Runner.Listener run --startuptype service
+        -u "$RUNNER_USER"
+    for _ in $(seq 1 "$RUNNER_VERBOSE"); do
+      set -- -v "$@"
+    done
+  fi
+  run_krunvm start "$RUNNER_NAME" "$runner" -- "$@"
 done

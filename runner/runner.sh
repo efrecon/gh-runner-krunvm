@@ -79,6 +79,10 @@ RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/actions-runner"}
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
+# Environment file to read configuration from (will override command-line
+# options!). The environment file is automatically removed after reading.
+RUNNER_ENVFILE=${RUNNER_ENVFILE:-""}
+
 RUNNER_TOOL_CACHE=${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtoolcache"}"}
 
 # shellcheck source=../lib/common.sh
@@ -88,10 +92,12 @@ RUNNER_TOOL_CACHE=${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtool
 KRUNVM_RUNNER_MAIN="Configure and run the installed GitHub runner"
 
 
-while getopts "eg:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "eE:g:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     e) # Ephemeral runner
       RUNNER_EPHEMERAL=1;;
+    E) # Environment file to read configuration from, will be removed after reading
+      RUNNER_ENVFILE="$OPTARG";;
     g) # GitHub host, e.g. github.com or github.example.com
       RUNNER_GITHUB="$OPTARG";;
     G) # Group to attach the runner to
@@ -209,6 +215,25 @@ runas() {
   fi
 }
 
+# Read environment file, if set. Do this early on so we can override any other
+# variable that would have come from environment or script options.
+if [ -n "$RUNNER_ENVFILE" ]; then
+  if [ -f "$RUNNER_ENVFILE" ]; then
+    verbose "Reading environment file $RUNNER_ENVFILE"
+    # shellcheck disable=SC1090 # File has been created by runner.sh loop
+    . "$RUNNER_ENVFILE"
+    rm -f "$RUNNER_ENVFILE"
+    debug "Removed environment file $RUNNER_ENVFILE"
+    # Pass logging configuration and level to imported scripts (again!) since we
+    # might have modified in the .env file.
+    KRUNVM_RUNNER_LOG=$RUNNER_LOG
+    KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
+  else
+    error "Environment file $RUNNER_ENVFILE does not exist"
+  fi
+fi
+
+# Check requirements.
 check_command "$RUNNER_ROOTDIR/token.sh"
 if [ -z "$RUNNER_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"
@@ -219,6 +244,8 @@ if [ "$#" = 0 ]; then
   set -- /opt/actions-runner/bin/Runner.Listener run --startuptype service
 fi
 
+# Setup variables that would have been missing. These depends on the main
+# variables, so we do it here rather than at the top of the script.
 debug "Setting up missing defaults"
 distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
@@ -232,6 +259,7 @@ else
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
 fi
 
+# Construct the runner URL, i.e. where the runner will be registered
 debug "Constructing runner URL"
 RUNNER_SCOPE=$(to_lower "$RUNNER_SCOPE")
 case "$RUNNER_SCOPE" in

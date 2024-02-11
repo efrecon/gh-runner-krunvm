@@ -67,6 +67,7 @@ get_env() (
 )
 
 run_krunvm() {
+  debug "Running krunvm $*"
   buildah unshare krunvm "$@"
 }
 

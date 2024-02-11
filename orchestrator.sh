@@ -48,6 +48,8 @@ ORCHESTRATOR_DNS=${ORCHESTRATOR_DNS:-"1.1.1.1"}
 
 ORCHESTRATOR_MOUNT=${ORCHESTRATOR_MOUNT:-""}
 
+ORCHESTRATOR_ISOLATION=${ORCHESTRATOR_ISOLATION:-"1"}
+
 # GitHub host, e.g. github.com or github.example.com
 RUNNER_GITHUB=${RUNNER_GITHUB:-"github.com"}
 
@@ -80,7 +82,7 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 KRUNVM_RUNNER_MAIN="Run several krunvm-based GitHub runners on a single host"
 
 
-while getopts "c:d:g:G:i:l:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "c:d:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       ORCHESTRATOR_CPUS="$OPTARG";;
@@ -92,6 +94,8 @@ while getopts "c:d:g:G:i:l:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_GROUP="$OPTARG";;
     i) # Fully-qualified name of the OCI image to use
       ORCHESTRATOR_IMAGE="$OPTARG";;
+    I) # Turn off variables isolation (not recommended, security risk)
+      ORCHESTRATOR_ISOLATION=0;;
     l) # Where to send logs
       ORCHESTRATOR_LOG="$OPTARG";;
     L) # Comma separated list of labels to attach to the runner
@@ -128,6 +132,13 @@ shift $((OPTIND-1))
 KRUNVM_RUNNER_LOG=$ORCHESTRATOR_LOG
 KRUNVM_RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 
+cleanup() {
+  if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
+    verbose "Removing isolation environment $ORCHESTRATOR_ENVIRONMENT"
+    rm -rf "$ORCHESTRATOR_ENVIRONMENT"
+  fi
+}
+
 if [ "$#" = 0 ];  then
   error "You need to specify the number of runners to create"
 fi
@@ -144,23 +155,27 @@ if run_krunvm list | grep -qE "^$ORCHESTRATOR_NAME"; then
   run_krunvm delete "$ORCHESTRATOR_NAME"
 fi
 
-verbose "Creating micro VM $ORCHESTRATOR_NAME, $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
-if [ -z "$ORCHESTRATOR_MOUNT" ]; then
-  run_krunvm create \
-    --cpus "$ORCHESTRATOR_CPUS" \
-    --mem "$ORCHESTRATOR_MEMORY" \
-    --dns "$ORCHESTRATOR_DNS" \
-    --name "$ORCHESTRATOR_NAME" \
-    "$ORCHESTRATOR_IMAGE"
-else
-  run_krunvm create \
-    "$ORCHESTRATOR_IMAGE" \
-    --cpus "$ORCHESTRATOR_CPUS" \
-    --mem "$ORCHESTRATOR_MEMORY" \
-    --dns "$ORCHESTRATOR_DNS" \
-    --name "$ORCHESTRATOR_NAME" \
-    --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_MOUNT}"
+# Remember number of runners
+runners=$1
+
+# Create isolation mount point
+if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
+  ORCHESTRATOR_ENVIRONMENT=$(mktemp -d)
+  trap cleanup INT TERM QUIT
 fi
+
+verbose "Creating $runners micro VM(s) $ORCHESTRATOR_NAME, $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
+# Note: reset arguments!
+set -- \
+  --cpus "$ORCHESTRATOR_CPUS" \
+  --mem "$ORCHESTRATOR_MEMORY" \
+  --dns "$ORCHESTRATOR_DNS" \
+  --name "$ORCHESTRATOR_NAME"
+set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_MOUNT}"
+if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
+  set -- "$@" --volume "${ORCHESTRATOR_ENVIRONMENT}:/_environment"
+fi
+run_krunvm create "$ORCHESTRATOR_IMAGE" "$@"
 
 # Export all RUNNER_ variables
 while IFS= read -r varname; do
@@ -170,21 +185,27 @@ done <<EOF
 $(set | grep '^RUNNER_' | sed 's/=.*//')
 EOF
 
+# Pass verbosity and log configuration also
 RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
-export RUNNER_VERBOSE
+RUNNER_LOG=$ORCHESTRATOR_LOG
+export RUNNER_VERBOSE RUNNER_LOG
 
-# Remember number of runners and reset positional parameters
-runners=$1; set --
-
-# Create runner loops
+# Create runner loops in the background. One per runner. Each loop will
+# indefinitely create ephemeral runners. Looping is implemented in runner.sh,
+# in the same directory as this script.
+set --; # Reset arguments
 for i in $(seq 1 "$runners"); do
   if [ -n "${RUNNER_PAT:-}" ]; then
     verbose "Creating runner loop $i"
-    "$ORCHESTRATOR_ROOTDIR/runner.sh" -n "$ORCHESTRATOR_NAME" -M "$ORCHESTRATOR_MOUNT" &
+    "$ORCHESTRATOR_ROOTDIR/runner.sh" \
+      -n "$ORCHESTRATOR_NAME" \
+      -M "$ORCHESTRATOR_MOUNT" \
+      -E "${ORCHESTRATOR_ENVIRONMENT:-}" &
     set -- "$@" "$!"
   fi
 done
 
+# TODO: Trap signals to send kill signals to the runners
 verbose "Waiting for runners to die"
 for pid in "$@"; do
   wait "$pid"
