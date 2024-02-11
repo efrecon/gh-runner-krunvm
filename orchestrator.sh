@@ -53,7 +53,8 @@ ORCHESTRATOR_NAME=${ORCHESTRATOR_NAME:-"runner"}
 # DNS to use on the VM. This is the same as the default in krunvm.
 ORCHESTRATOR_DNS=${ORCHESTRATOR_DNS:-"1.1.1.1"}
 
-# Host->VM mount points, pairs of directories separated by a colon.
+# Host->VM mount points, lines containing pairs of directory mappings separated
+# by a colon.
 ORCHESTRATOR_MOUNT=${ORCHESTRATOR_MOUNT:-""}
 
 # Name of top directory in VM where to host a copy of the root directory of this
@@ -122,8 +123,12 @@ while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_LABELS="$OPTARG";;
     m) # Memory to allocate to the VM
       ORCHESTRATOR_MEMORY="$OPTARG";;
-    M) # Mount local
-      ORCHESTRATOR_MOUNT="$OPTARG";;
+    M) # Mount local host directories into the VM <host dir>:<vm root dir>
+      if [ -z "$ORCHESTRATOR_MOUNT" ]; then
+        ORCHESTRATOR_MOUNT="$OPTARG"
+      else
+        ORCHESTRATOR_MOUNT="$(printf %s\\n%s\\n "$ORCHESTRATOR_MOUNT" "$OPTARG")"
+      fi;;
     n) # Name of the VM to create
       ORCHESTRATOR_NAME="$OPTARG";;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
@@ -184,6 +189,9 @@ if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
   trap cleanup INT TERM QUIT
 fi
 
+# Create the VM used for orchestration. Add --volume options for all necessary
+# mappings, i.e. inheritance of "live" code, environment isolation and all
+# requested mount points.
 verbose "Creating $runners micro VM(s) $ORCHESTRATOR_NAME, $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
 # Note: reset arguments!
 set -- \
@@ -191,14 +199,23 @@ set -- \
   --mem "$ORCHESTRATOR_MEMORY" \
   --dns "$ORCHESTRATOR_DNS" \
   --name "$ORCHESTRATOR_NAME"
-# TODO: Implement mounts
 set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_DIR}"
 if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
   set -- "$@" --volume "${ORCHESTRATOR_ENVIRONMENT}:/_environment"
 fi
+if [ -n "$ORCHESTRATOR_MOUNT" ]; then
+  while IFS= read -r mount || [ -n "$mount" ]; do
+    if [ -n "$mount" ]; then
+      set -- "$@" --volume "$mount"
+    fi
+  done <<EOF
+$(printf %s\\n "$ORCHESTRATOR_MOUNT")
+EOF
+fi
 run_krunvm create "$ORCHESTRATOR_IMAGE" "$@"
 
-# Export all RUNNER_ variables
+# Export all RUNNER_ variables. This works because the 'runner.sh' script that
+# will create VM in loops uses variables prefixed with RUNNER_.
 while IFS= read -r varname; do
   # shellcheck disable=SC2163 # We want to expand the variable
   export "$varname"
