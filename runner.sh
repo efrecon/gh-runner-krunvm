@@ -83,7 +83,7 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"1"}
 . "$RUNNER_ROOTDIR/lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Create runners forever using krunvm"
+KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
 while getopts "D:E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
@@ -118,6 +118,8 @@ while getopts "D:E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
       RUNNER_VERBOSE=$((RUNNER_VERBOSE+1));;
     h) # Print help and exit
       usage;;
+    -) # End of options, follows the identifier of the runner, if any
+      break;;
     ?)
       usage 1;;
   esac
@@ -127,6 +129,11 @@ shift $((OPTIND-1))
 # Pass logging configuration and level to imported scripts
 KRUNVM_RUNNER_LOG=$RUNNER_LOG
 KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
+loop=${1:-}
+if [ -n "${loop:-}" ]; then
+  KRUNVM_RUNNER_BIN=$(basename "$0")
+  KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$loop"
+fi
 
 # Decide which runner.sh implementation (this is the "entrypoint" of the
 # microVM) to use: the one from the mount point, or the built-in one.
@@ -138,25 +145,27 @@ else
 fi
 
 while true; do
-  verbose "Starting microVM $RUNNER_NAME to run an ephemeral GitHub runner"
+  id=$(random_string)
+  RUNNER_ID=${loop}-${id}
+  verbose "Starting microVM $RUNNER_NAME to run ephemeral GitHub runner $RUNNER_ID"
   if [ -n "$RUNNER_ENVIRONMENT" ]; then
     # Create an env file with most of the RUNNER_ variables. This works because
     # the `runner.sh` script that will be called uses the same set of variables.
-    id=$(random_string)
-    verbose "Creating isolation environment ${RUNNER_ENVIRONMENT}/${id}.env"
+    verbose "Creating isolation environment ${RUNNER_ENVIRONMENT}/${RUNNER_ID}.env"
     while IFS= read -r varset; do
       # shellcheck disable=SC2163 # We want to expand the variable
-      printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${id}.env"
+      printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.env"
     done <<EOF
 $(set | grep '^RUNNER_' | grep -vE '(ROOTDIR|ENVIRONMENT|NAME|MOUNT)')
 EOF
 
-    set -- -E "/_environment/${id}.env"
+    set -- -E "/_environment/${RUNNER_ID}.env"
   else
     set -- \
         -e \
         -g "$RUNNER_GITHUB" \
         -G "$RUNNER_GROUP" \
+        -i "$RUNNER_ID" \
         -l "$RUNNER_LOG" \
         -L "$RUNNER_LABELS" \
         -p "$RUNNER_PRINCIPAL" \

@@ -98,7 +98,7 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 . "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Run several krunvm-based GitHub runners on a single host"
+KRUNVM_RUNNER_DESCR="Run several krunvm-based GitHub runners on a single host"
 
 
 while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
@@ -238,7 +238,8 @@ for i in $(seq 1 "$runners"); do
     "$ORCHESTRATOR_ROOTDIR/runner.sh" \
       -n "$ORCHESTRATOR_NAME" \
       -D "$ORCHESTRATOR_DIR" \
-      -E "${ORCHESTRATOR_ENVIRONMENT:-}" &
+      -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
+      -- "$i" &
     set -- "$@" "$!"
   fi
 done

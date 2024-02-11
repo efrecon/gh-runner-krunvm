@@ -83,16 +83,19 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 # options!). The environment file is automatically removed after reading.
 RUNNER_ENVFILE=${RUNNER_ENVFILE:-""}
 
+# Identifier of the runner (used in logs)
+RUNNER_ID=${RUNNER_ID:-""}
+
 RUNNER_TOOL_CACHE=${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtoolcache"}"}
 
 # shellcheck source=../lib/common.sh
 . "$RUNNER_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Configure and run the installed GitHub runner"
+KRUNVM_RUNNER_DESCR="Configure and run the installed GitHub runner"
 
 
-while getopts "eE:g:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "eE:g:G:i:l:L:n:p:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     e) # Ephemeral runner
       RUNNER_EPHEMERAL=1;;
@@ -102,11 +105,13 @@ while getopts "eE:g:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_GITHUB="$OPTARG";;
     G) # Group to attach the runner to
       RUNNER_GROUP="$OPTARG";;
+    i) # Identifier of the runner (used in logs and to name the runner)
+      RUNNER_ID="$OPTARG";;
     l) # Where to send logs
       RUNNER_LOG="$OPTARG";;
     L) # Comma separated list of labels to attach to the runner
       RUNNER_LABELS="$OPTARG";;
-    n) # Name of the runner to register (random prefixed name will be used if not set)
+    n) # Name of the runner to register (id or random prefixed name will be used if not set)
       RUNNER_NAME="$OPTARG";;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
@@ -124,7 +129,7 @@ while getopts "eE:g:G:l:L:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_VERBOSE=$((RUNNER_VERBOSE+1));;
     h) # Print help and exit
       usage;;
-    -) # End of options, everything is executed as a command, as relevant user
+    -) # End of options, everything after is executed as a command, as relevant user
       break;;
     ?)
       usage 1;;
@@ -135,6 +140,11 @@ shift $((OPTIND-1))
 # Pass logging configuration and level to imported scripts
 KRUNVM_RUNNER_LOG=$RUNNER_LOG
 KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
+if [ -z "$RUNNER_ID" ]; then
+  RUNNER_ID=$(random_string)
+fi
+KRUNVM_RUNNER_BIN=$(basename "$0")
+KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 
 configure() {
   verbose "Registering $RUNNER_SCOPE runner '$RUNNER_NAME' for $RUNNER_URL"
@@ -227,6 +237,8 @@ if [ -n "$RUNNER_ENVFILE" ]; then
     # might have modified in the .env file.
     KRUNVM_RUNNER_LOG=$RUNNER_LOG
     KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
+    KRUNVM_RUNNER_BIN=$(basename "$0")
+    KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 
     # Remove the environment file, as it is not needed anymore and might
     # contains secrets.
@@ -254,7 +266,7 @@ debug "Setting up missing defaults"
 distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
 RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
-RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_NAME_PREFIX}-$(random_string)"}
+RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_NAME_PREFIX}-$RUNNER_ID"}
 
 RUNNER_WORKDIR=${RUNNER_WORKDIR:-"/_work/${RUNNER_NAME}"}
 if [ -n "${distro:-}" ]; then

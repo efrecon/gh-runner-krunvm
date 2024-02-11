@@ -54,7 +54,7 @@ BASE_DOCKER_WRAPPER=${BASE_DOCKER_WRAPPER:-$BASE_ROOTDIR/docker.sh}
 . "$BASE_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Install a base GitHub runner environment in Fedora"
+KRUNVM_RUNNER_DESCR="Install a base GitHub runner environment in Fedora"
 
 while getopts "dl:vh-" opt; do
   case "$opt" in

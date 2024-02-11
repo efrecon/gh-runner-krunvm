@@ -39,7 +39,7 @@ random_string() {
 usage() {
   # This uses the comments behind the options to show the help. Not extremly
   # correct, but effective and simple.
-  echo "$0 -- ${KRUNVM_RUNNER_MAIN:-"Part of the gh-krunvm-runner project"}" && \
+  echo "$0 -- ${KRUNVM_RUNNER_DESCR:-"Part of the gh-krunvm-runner project"}" && \
     grep "[[:space:]].) #" "$0" |
     sed 's/#//' |
     sed -r 's/([a-zA-Z-])\)/-\1/'
@@ -75,9 +75,13 @@ run_krunvm() {
 _log() {
   # Capture level and shift it away, rest will be passed blindly to printf
   _lvl=${1:-LOG}; shift
+  if [ -z "${KRUNVM_RUNNER_BIN:-}" ]; then
+    KRUNVM_RUNNER_BIN=$(basename "$0")
+    KRUNVM_RUNNER_BIN=${KRUNVM_RUNNER_BIN%.sh}
+  fi
   # shellcheck disable=SC2059 # We want to expand the format string
   printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
+    "${KRUNVM_RUNNER_BIN:-$(basename "$0")}" \
     "$_lvl" \
     "$(date +'%Y%m%d-%H%M%S')" \
     "$(printf "$@")" \

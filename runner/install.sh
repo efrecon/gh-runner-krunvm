@@ -54,7 +54,7 @@ INSTALL_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")"
 . "$INSTALL_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Install the GitHub runner"
+KRUNVM_RUNNER_DESCR="Install the GitHub runner"
 
 while getopts "l:u:vh-" opt; do
   case "$opt" in
