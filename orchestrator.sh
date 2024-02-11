@@ -205,7 +205,6 @@ for i in $(seq 1 "$runners"); do
   fi
 done
 
-# TODO: Trap signals to send kill signals to the runners
 verbose "Waiting for runners to die"
 for pid in "$@"; do
   wait "$pid"
