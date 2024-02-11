@@ -75,6 +75,10 @@ RUNNER_MOUNT=${RUNNER_MOUNT:-""}
 # Location (at host) where to place environment files for each run.
 RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT:-""}
 
+# Should the runner be ephemeral, i.e. only run once. There is no CLI option for
+# this, since the much preferred behaviour is to run ephemeral runners.
+RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"1"}
+
 # shellcheck source=lib/common.sh
 . "$RUNNER_ROOTDIR/lib/common.sh"
 
