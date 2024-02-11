@@ -135,7 +135,7 @@ while true; do
       # shellcheck disable=SC2163 # We want to expand the variable
       printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${id}.env"
     done <<EOF
-$(set | grep '^RUNNER_' | grep -v -e '^RUNNER_ROOTDIR' -e '^RUNNER_ENVIRONMENT')
+$(set | grep '^RUNNER_' | grep -vE '(ROOTDIR|ENVIRONMENT|NAME|MOUNT)')
 EOF
 
     set -- -E "/_environment/${id}.env"
