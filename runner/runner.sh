@@ -222,12 +222,16 @@ if [ -n "$RUNNER_ENVFILE" ]; then
     verbose "Reading environment file $RUNNER_ENVFILE"
     # shellcheck disable=SC1090 # File has been created by runner.sh loop
     . "$RUNNER_ENVFILE"
-    rm -f "$RUNNER_ENVFILE"
-    debug "Removed environment file $RUNNER_ENVFILE"
+
     # Pass logging configuration and level to imported scripts (again!) since we
     # might have modified in the .env file.
     KRUNVM_RUNNER_LOG=$RUNNER_LOG
     KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
+
+    # Remove the environment file, as it is not needed anymore and might
+    # contains secrets.
+    rm -f "$RUNNER_ENVFILE"
+    debug "Removed environment file $RUNNER_ENVFILE"
   else
     error "Environment file $RUNNER_ENVFILE does not exist"
   fi
