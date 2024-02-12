@@ -117,3 +117,25 @@ the runner (sic). In most cases, the runner will be run as the `runner` user.
 
   [main]: https://github.com/myoung34/docker-github-actions-runner/blob/master/Dockerfile
   [entrypoint]: https://github.com/myoung34/docker-github-actions-runner/blob/master/entrypoint.sh
+
+## Organisation of the GitHub Runners
+
+The logged in user is called `runner`. User id `1001`, group `127`. The main
+group of the user is the `docker` group. Home directory is `/home/runner`. Under
+that directory is a directory called `work`, the working directory under which
+repositories are checked out (by default).
+
+Directly under the home directory of the `runner` user, there is a directory
+called `runners`. It contains `tgz` files named after the version number of the
+runners that have existed on the machine, e.g. `2.313.0.tgz`. It also contains
+directories named after the version number and containing all the installation
+files, e.g. `2.313.0`. Under these directories are the shell scripts to
+configure and run, e.g. `config.sh` and `run.sh`, but also a number of hidden
+files, all starting with a dot `.` containing the configuration (also live
+configuration of the runner). For example, `.runner` seems to contain part of
+the configuration and `.path` and `.env` being the files that seed (or are) the
+files pointed at by the `GITHUB_PATH` and `GITHUB_ENV` environment variables.
+
+The hosted tool cache is at `/opt/hostedtoolcache`. It is owned by the
+`runner:docker` user:group pair. There is also a `/opt/actionarchivecache`, same
+user:group pair.
