@@ -69,6 +69,9 @@ ORCHESTRATOR_DIR=${ORCHESTRATOR_DIR:-""}
 # used.
 ORCHESTRATOR_ISOLATION=${ORCHESTRATOR_ISOLATION:-"1"}
 
+# Number of seconds to sleep between microVM creation at start
+ORCHESTRATOR_SLEEP=${ORCHESTRATOR_SLEEP:-"30"}
+
 # GitHub host, e.g. github.com or github.example.com
 RUNNER_GITHUB=${RUNNER_GITHUB:-"github.com"}
 
@@ -241,6 +244,12 @@ for i in $(seq 1 "$runners"); do
       -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
       -- "$i" &
     set -- "$@" "$!"
+    if [ "$i" -lt "$runners" ]; then
+      if [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
+        debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
+        sleep "$ORCHESTRATOR_SLEEP"
+      fi
+    fi
   fi
 done
 
