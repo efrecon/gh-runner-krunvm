@@ -146,7 +146,25 @@ fi
 KRUNVM_RUNNER_BIN=$(basename "$0")
 KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 
-configure() {
+# Install a copy of the runner installation into the work directory. Perform a
+# minimal verification of the installation through checking that there is a
+# config.sh script executable within the copy.
+runner_install() {
+  # Make a directory where to install a copy of the runner.
+  if ! [ -d "${RUNNER_WORKDIR%/}/runner" ]; then
+    mkdir -p "${RUNNER_WORKDIR%/}/runner"
+    verbose "Created runner directory ${RUNNER_WORKDIR%/}/runner"
+  fi
+  verbose "Installing runner in ${RUNNER_WORKDIR%/}/runner"
+  # shellcheck disable=SC2086 # We want to expand here
+  cp -af ${RUNNER_INSTALL%/}/* "${RUNNER_WORKDIR%/}/runner/"
+  check_command "${RUNNER_WORKDIR%/}/runner/config.sh"
+}
+
+
+# Configure the runner and register it at GitHub. This will use the runner
+# installation copy from runner_install.
+runner_configure() {
   verbose "Registering $RUNNER_SCOPE runner '$RUNNER_NAME' for $RUNNER_URL"
   if [ -n "${RUNNER_PAT:-}" ]; then
     if [ -n "${RUNNER_TOKEN:-}" ]; then
@@ -162,15 +180,24 @@ configure() {
                       -T "$RUNNER_PAT" )
   fi
 
+  # Bail out if no token is available
   if [ -z "${RUNNER_TOKEN:-}" ]; then
     error "No runner token provided or acquired"
   fi
 
+  # Create the work directory. This is where the runner will be working, e.g.
+  # checking out repositories, actions, etc.
+  if ! [ -d "${RUNNER_WORKDIR%/}/work" ]; then
+    mkdir -p "${RUNNER_WORKDIR%/}/work"
+    verbose "Created work directory ${RUNNER_WORKDIR%/}/work"
+  fi
+
+  # Construct CLI arguments for the runner configuration
   set -- \
     --url "$RUNNER_URL" \
     --token "$RUNNER_TOKEN" \
     --name "$RUNNER_NAME" \
-    --work "$RUNNER_WORKDIR" \
+    --work "${RUNNER_WORKDIR%/}/work" \
     --labels "$RUNNER_LABELS" \
     --runnergroup "$RUNNER_GROUP" \
     --unattended \
@@ -182,18 +209,14 @@ configure() {
     set -- "$@" --disableupdate
   fi
 
+  # Configure the runner from the installation copy
   verbose "Configuring runner ${RUNNER_NAME}..."
-  debug "Configuration details: $*"
-  RUNNER_ALLOW_RUNASROOT=1 "$RUNNER_INSTALL/config.sh" "$@"
-
-  if ! [ -d "$RUNNER_WORKDIR" ]; then
-    mkdir -p "$RUNNER_WORKDIR"
-    verbose "Created work directory $RUNNER_WORKDIR"
-  fi
+  runner_control config.sh "$@"
 }
 
 
-unregister() {
+# Unregister the runner from GitHub. This will use the runner installation copy
+runner_unregister() {
   verbose "Caught termination signal, unregistering runner"
   if [ -n "${RUNNER_PAT:-}" ]; then
     verbose "Requesting (back) runner token with PAT"
@@ -206,7 +229,20 @@ unregister() {
                       -T "$RUNNER_PAT" )
   fi
   verbose "Removing runner at GitHub"
-  RUNNER_ALLOW_RUNASROOT=1 "$RUNNER_INSTALL/config.sh" remove --token "$RUNNER_TOKEN"
+  runner_control config.sh remove --token "$RUNNER_TOKEN"
+}
+
+
+# Run one of the runner scripts from the installation copy. The implementation
+# temporary changes directory before calling the script.
+runner_control() {
+  cwd=$(pwd)
+  cd "${RUNNER_WORKDIR%/}/runner"
+  script=./${1}; shift
+  check_command "$script"
+  debug "Running $script $*"
+  RUNNER_ALLOW_RUNASROOT=1 "$script" "$@"
+  cd "$cwd"
 }
 
 
@@ -255,11 +291,6 @@ if [ -z "$RUNNER_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"
 fi
 
-if [ "$#" = 0 ]; then
-  warn "No command to run, will take defaults"
-  set -- /opt/actions-runner/bin/Runner.Listener run --startuptype service
-fi
-
 # Setup variables that would have been missing. These depends on the main
 # variables, so we do it here rather than at the top of the script.
 debug "Setting up missing defaults"
@@ -296,11 +327,17 @@ case "$RUNNER_SCOPE" in
     ;;
 esac
 
-# Configure the runner
-configure
+# Install runner binaries into SEPARATE directory, then configure from there
+runner_install
+runner_configure
+
+if [ "$#" = 0 ]; then
+  warn "No command to run, will take defaults"
+  set -- "${RUNNER_WORKDIR%/}/runner/bin/Runner.Listener" run --startuptype service
+fi
 
 # Capture termination signals
-trap unregister INT TERM QUIT
+trap runner_unregister INT TERM QUIT
 
 # Start the docker daemon. Prefer podman if available (it will be the only one
 # available, unless the dockerd is installed in the future)
