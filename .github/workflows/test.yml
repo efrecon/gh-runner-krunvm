@@ -19,5 +19,9 @@ jobs:
           ps -edalf
       - name: Debug
         run: |
+          for i in $(seq 1 60); do
+            echo "Hello $i"
+            sleep 1
+          done
           curl -sSf https://sshx.io/get | sh
           sshx
