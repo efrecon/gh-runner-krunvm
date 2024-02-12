@@ -7,7 +7,7 @@ on:
 
 jobs:
   test:
-    runs-on: fedora
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
@@ -21,4 +21,3 @@ jobs:
         run: |
           curl -sSf https://sshx.io/get | sh
           sshx
-          
