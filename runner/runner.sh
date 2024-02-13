@@ -74,7 +74,7 @@ RUNNER_PAT=${RUNNER_PAT:-""}
 RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"0"}
 
 # Root installation of the runner
-RUNNER_INSTALL=${RUNNER_INSTALL:-"$RUNNER_ROOTDIR/../share/runner"}
+RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/gh-runner-krunvm/share/runner"}
 
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
@@ -255,7 +255,8 @@ docker_daemon() {
     # Start podman as a service, make sure it can be accessed by the runner
     # user.
     verbose "Starting $podman as a daemon"
-    runas "$podman" system service --time=0 unix:///var/run/docker.sock &
+    "$podman" system service --time=0 unix:///var/run/docker.sock &
+    wait_path -S "/var/run/docker.sock" 60
     # Arrange for members of the docker group, which the runner user is a member
     # to be able to access the socket.
     chgrp "docker" /var/run/docker.sock

@@ -71,6 +71,25 @@ run_krunvm() {
   buildah unshare krunvm "$@"
 }
 
+# Wait for a path to exist
+# $1 is the test to perform, e.g. -f for file, -d for directory, etc.
+# $2 is the path to wait for
+# $3 is the timeout in seconds
+# $4 is the interval in seconds
+wait_path() {
+  _interval="${4:-1}"
+  _elapsed=0
+
+  while ! test "$1" "$2"; do
+    if [ "$_elapsed" -ge "${3:-60}" ]; then
+      error "Timeout waiting for $2"
+    fi
+    _elapsed=$((_elapsed+_interval))
+    sleep "$_interval"
+    debug "Waiting for $2"
+  done
+}
+
 # PML: Poor Man's Logging
 _log() {
   # Capture level and shift it away, rest will be passed blindly to printf
