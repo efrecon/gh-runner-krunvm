@@ -202,7 +202,9 @@ set -- \
   --mem "$ORCHESTRATOR_MEMORY" \
   --dns "$ORCHESTRATOR_DNS" \
   --name "$ORCHESTRATOR_NAME"
-set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_DIR}"
+if [ -n "${ORCHESTRATOR_DIR:-}" ]; then
+  set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_DIR}"
+fi
 if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
   set -- "$@" --volume "${ORCHESTRATOR_ENVIRONMENT}:/_environment"
 fi
