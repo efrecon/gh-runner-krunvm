@@ -56,7 +56,7 @@ TOKEN_PRINCIPAL=${TOKEN_PRINCIPAL:-""}
 . "$TOKEN_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_MAIN="Acquire a runner token from GitHub API"
+KRUNVM_RUNNER_DESCR="Acquire a runner token from GitHub API"
 
 while getopts "g:l:p:s:T:vh-" opt; do
   case "$opt" in
@@ -87,6 +87,7 @@ KRUNVM_RUNNER_VERBOSE=$TOKEN_VERBOSE
 if [ -z "$TOKEN_PRINCIPAL" ]; then
   error "Principal must be set to name of repo, org or enterprise"
 fi
+check_command jq
 
 # Set the API URL based on the GitHub host
 if [ "$TOKEN_GITHUB" = "github.com" ]; then

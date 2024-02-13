@@ -1,0 +1,31 @@
+name: dev
+
+on:
+  push:
+    branches:
+      - feature/*
+
+jobs:
+  build-base:
+    uses: ./.github/workflows/_build.yml
+    with:
+      image: ${{ github.actor }}/runner-krunvm-base
+      file: Dockerfile.base
+      platforms: linux/amd64
+    secrets:
+      username: ${{ github.actor }}
+      password: ${{ secrets.GITHUB_TOKEN }}
+
+  build-main:
+    needs:
+      - build-base
+    uses: ./.github/workflows/_build.yml
+    with:
+      image: ${{ github.actor }}/runner-krunvm
+      file: Dockerfile
+      platforms: linux/amd64
+      build-args: |
+        VERSION=${{ needs.build-base.outputs.version }}
+    secrets:
+      username: ${{ github.actor }}
+      password: ${{ secrets.GITHUB_TOKEN }}

@@ -39,20 +39,68 @@ random_string() {
 usage() {
   # This uses the comments behind the options to show the help. Not extremly
   # correct, but effective and simple.
-  echo "$0 -- ${KRUNVM_RUNNER_MAIN:-"Part of the gh-krunvm-runner project"}" && \
+  echo "$0 -- ${KRUNVM_RUNNER_DESCR:-"Part of the gh-krunvm-runner project"}" && \
     grep "[[:space:]].) #" "$0" |
     sed 's/#//' |
-    sed -r 's/([a-z-])\)/-\1/'
+    sed -r 's/([a-zA-Z-])\)/-\1/'
   exit "${1:-0}"
+}
+
+check_command() {
+  trace "Checking $1 is an accessible command"
+  if ! command -v "$1" >/dev/null 2>&1; then
+    error "Command not found: $1"
+  fi
+}
+
+# Get the value of a variable in an env file. The function enforces sourcing in
+# a separate process to avoid leaking out the sources variables.
+get_env() (
+  if [ "$#" -ge 2 ]; then
+    if [ -f "$1" ]; then
+      # shellcheck disable=SC1090 # We want to source the file. Danger zone!
+      . "$1"
+
+      eval printf %s "\$$2" || true
+    fi
+  fi
+)
+
+run_krunvm() {
+  debug "Running krunvm $*"
+  buildah unshare krunvm "$@"
+}
+
+# Wait for a path to exist
+# $1 is the test to perform, e.g. -f for file, -d for directory, etc.
+# $2 is the path to wait for
+# $3 is the timeout in seconds
+# $4 is the interval in seconds
+wait_path() {
+  _interval="${4:-1}"
+  _elapsed=0
+
+  while ! test "$1" "$2"; do
+    if [ "$_elapsed" -ge "${3:-60}" ]; then
+      error "Timeout waiting for $2"
+    fi
+    _elapsed=$((_elapsed+_interval))
+    sleep "$_interval"
+    debug "Waiting for $2"
+  done
 }
 
 # PML: Poor Man's Logging
 _log() {
   # Capture level and shift it away, rest will be passed blindly to printf
   _lvl=${1:-LOG}; shift
+  if [ -z "${KRUNVM_RUNNER_BIN:-}" ]; then
+    KRUNVM_RUNNER_BIN=$(basename "$0")
+    KRUNVM_RUNNER_BIN=${KRUNVM_RUNNER_BIN%.sh}
+  fi
   # shellcheck disable=SC2059 # We want to expand the format string
   printf '[%s] [%s] [%s] %s\n' \
-    "$(basename "$0")" \
+    "${KRUNVM_RUNNER_BIN:-$(basename "$0")}" \
     "$_lvl" \
     "$(date +'%Y%m%d-%H%M%S')" \
     "$(printf "$@")" \
