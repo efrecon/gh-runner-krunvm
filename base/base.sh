@@ -115,7 +115,7 @@ dnf -y install \
 if [ "$BASE_DOCKER" = "1" ]; then
   verbose "Installing docker"
   dnf -y config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-  dnf -y install docker-ce-cli
+  dnf -y install docker-ce-cli docker-buildx-plugin docker-compose-plugin
 
   # Replace the real docker binary with our wrapper so we will be able to force
   # running containers on the host network.
