@@ -74,7 +74,7 @@ RUNNER_PAT=${RUNNER_PAT:-""}
 RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"0"}
 
 # Root installation of the runner
-RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/actions-runner"}
+RUNNER_INSTALL=${RUNNER_INSTALL:-"$RUNNER_ROOTDIR/../share/runner"}
 
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
@@ -156,8 +156,7 @@ runner_install() {
     verbose "Created runner directory ${RUNNER_WORKDIR%/}/runner"
   fi
   verbose "Installing runner in ${RUNNER_WORKDIR%/}/runner"
-  # shellcheck disable=SC2086 # We want to expand here
-  cp -af ${RUNNER_INSTALL%/}/* "${RUNNER_WORKDIR%/}/runner/"
+  tar -C "${RUNNER_WORKDIR%/}/runner" -zxf "$RUNNER_TAR"
   check_command "${RUNNER_WORKDIR%/}/runner/config.sh"
 }
 
@@ -246,6 +245,31 @@ runner_control() {
 }
 
 
+docker_daemon() {
+  # Actively look for the binaries in our PATH, so we can make sure the
+  # destination user knows where to find them.
+  podman=$(find_exec podman)
+  dockerd=$(find_exec dockerd)
+  # Start one of the daemons, preference podman
+  if [ -n "$podman" ]; then
+    # Start podman as a service, make sure it can be accessed by the runner
+    # user.
+    verbose "Starting $podman as a daemon"
+    runas "$podman" system service --time=0 unix:///var/run/docker.sock &
+    # Arrange for members of the docker group, which the runner user is a member
+    # to be able to access the socket.
+    chgrp "docker" /var/run/docker.sock
+    chmod g+rw /var/run/docker.sock
+  elif [ -n "$dockerd" ]; then
+    # For docker, the user must be in the docker group to access the daemon.
+    verbose "Starting $dockerd as a daemon"
+    $dockerd &
+  else
+    error "No docker/podman daemon found"
+  fi
+}
+
+
 runas() {
   if [ "$(id -u)" = "0" ]; then
     if command -v "runuser" >/dev/null 2>&1; then
@@ -306,6 +330,11 @@ else
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
 fi
 
+RUNNER_TAR=$(find "$RUNNER_INSTALL" -type f -name "*.tgz" | sort -r | head -n 1)
+if [ -z "$RUNNER_TAR" ]; then
+  error "No runner tar file found under $RUNNER_INSTALL"
+fi
+
 # Construct the runner URL, i.e. where the runner will be registered
 debug "Constructing runner URL"
 RUNNER_SCOPE=$(to_lower "$RUNNER_SCOPE")
@@ -342,24 +371,7 @@ trap runner_unregister INT TERM QUIT
 # Start the docker daemon. Prefer podman if available (it will be the only one
 # available, unless the dockerd is installed in the future)
 if is_true "$RUNNER_DOCKER"; then
-  # Actively look for the binaries in our PATH, so we can make sure the
-  # destination user knows where to find them.
-  podman=$(find_exec podman)
-  dockerd=$(find_exec dockerd)
-  # Start one of the daemons, preference podman
-  if [ -n "$podman" ]; then
-    # Start podman as a service, make sure it can be accessed by the runner
-    # user.
-    # TODO: Arrange for the user to be able to create the socket file?
-    verbose "Starting $podman as a daemon"
-    runas "$podman" system service --time=0 unix:///var/run/docker.sock &
-  elif [ -n "$dockerd" ]; then
-    # For docker, the user must be in the docker group to access the daemon.
-    verbose "Starting $dockerd as a daemon"
-    $dockerd &
-  else
-    error "No docker/podman daemon found"
-  fi
+  docker_daemon
 fi
 
 verbose "Starting runner as '$RUNNER_USER' (id=$(id -un)): $*"
