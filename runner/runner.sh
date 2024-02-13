@@ -50,7 +50,7 @@ RUNNER_GROUP=${RUNNER_GROUP:-"Default"}
 RUNNER_LABELS=${RUNNER_LABELS:-""}
 
 # Name of the user to run the runner as, defaults to root. User must exist.
-RUNNER_USER=${RUNNER_USER:-"root"}
+RUNNER_USER=${RUNNER_USER:-"runner"}
 
 # Scope of the runner, one of: repo, org or enterprise
 RUNNER_SCOPE=${RUNNER_SCOPE:-"repo"}

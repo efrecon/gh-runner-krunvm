@@ -81,8 +81,8 @@ RUNNER_GROUP=${RUNNER_GROUP:-"Default"}
 # Comma separated list of labels to attach to the runner (good defaults will be used if empty)
 RUNNER_LABELS=${RUNNER_LABELS:-""}
 
-# Name of the user to run the runner as, defaults to root. User must exist.
-RUNNER_USER=${RUNNER_USER:-"root"}
+# Name of the user to run the runner as, defaults to runner. User must exist.
+RUNNER_USER=${RUNNER_USER:-"runner"}
 
 # Scope of the runner, one of: repo, org or enterprise
 RUNNER_SCOPE=${RUNNER_SCOPE:-"repo"}
