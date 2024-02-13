@@ -25,6 +25,10 @@ abspath() {
   fi
 }
 
+# Resolve the root directory hosting this script to an absolute path, symbolic
+# links resolved.
+INSTALL_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 INSTALL_VERBOSE=${INSTALL_VERBOSE:-0}
@@ -35,8 +39,8 @@ INSTALL_PROJECT=${INSTALL_PROJECT:-"actions/runner"}
 # Where to send logs
 INSTALL_LOG=${INSTALL_LOG:-2}
 
-# Where to install the runner
-INSTALL_DIR=${INSTALL_DIR:-"/opt/actions-runner"}
+# Where to install the runner tar file
+INSTALL_DIR=${INSTALL_DIR:-"$INSTALL_ROOTDIR/../share/runner"}
 
 INSTALL_TOOL_CACHE=${INSTALL_TOOL_CACHE:-"${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtoolcache"}"}"}
 
@@ -45,10 +49,6 @@ INSTALL_DIRECTORIES=${INSTALL_DIRECTORIES:-"/_work $INSTALL_TOOL_CACHE $INSTALL_
 
 # User to change ownership of directories to
 INSTALL_USER=${INSTALL_USER:-runner}
-
-# Resolve the root directory hosting this script to an absolute path, symbolic
-# links resolved.
-INSTALL_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
 
 # shellcheck source=../lib/common.sh
 . "$INSTALL_ROOTDIR/../lib/common.sh"
@@ -105,10 +105,9 @@ esac
 # Download and install the runner
 verbose "Downloading version ${INSTALL_VERSION} of the $INSTALL_ARCH runner"
 mkdir -p "$INSTALL_DIR"
-curl -sSL "https://github.com/${INSTALL_PROJECT}/releases/download/v${INSTALL_VERSION}/actions-runner-linux-${INSTALL_ARCH}-${INSTALL_VERSION}.tar.gz" > "${INSTALL_DIR}/actions-runner.tgz"
+curl -sSL "https://github.com/${INSTALL_PROJECT}/releases/download/v${INSTALL_VERSION}/actions-runner-linux-${INSTALL_ARCH}-${INSTALL_VERSION}.tar.gz" > "${INSTALL_DIR}/${INSTALL_VERSION}.tgz"
 verbose "Installing runner to $INSTALL_DIR"
-tar -C "$INSTALL_DIR" -zxf "${INSTALL_DIR}/actions-runner.tgz"
-rm -f "${INSTALL_DIR}/actions-runner.tgz"
+tar -C "$INSTALL_DIR" -zxf "${INSTALL_DIR}/${INSTALL_VERSION}.tgz"
 
 # Install the dependencies (this is distro specific and aware)
 "${INSTALL_DIR}/bin/installdependencies.sh"
