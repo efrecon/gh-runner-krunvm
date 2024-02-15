@@ -6,8 +6,7 @@ This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
 Kubernetes or Docker containers. MicroVMs boot quickly, providing an experience
 close to running containers. [krunvm] creates and starts VM based on the OCI
 [images] created for this project. In theory, these images should be able to be
-used in more traditional container-based solutions. And while these images are
-based on Fedora, running on top of ubuntu should also be possible.
+used in more traditional container-based solutions.
 
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
@@ -15,25 +14,6 @@ based on Fedora, running on top of ubuntu should also be possible.
   [microVM]: https://github.com/infracloudio/awesome-microvm
   [solutions]: https://github.com/jonico/awesome-runners
   [images]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm
-
-## Requirements
-
-This project is coded in pure POSIX shell and has only been tested on Linux. The
-images are automatically [built] both for x86_64 and AArch64. However, [krunvm]
-also runs on MacOS. No "esoteric" options have been used when using the standard
-UNIX binary utilities. PRs are welcome to make the project work on MacOS, if it
-does not already.
-
-Apart from the standard UNIX binary utilities, you will need the following
-installed on the host.
-
-+ `curl`
-+ `jq`
-+ `buildah`
-+ `krunvm` (and its [requirements])
-
-  [built]: ./.github/workflows/ci.yml
-  [requirements]: https://github.com/containers/krunvm#installation
 
 ## Example
 
@@ -62,6 +42,52 @@ starting with `RUNNER_` will affect the behaviour of each runner. Usually, the
 only script that you will be using is the [orchestrator](./orchestrator.sh).
 
   [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
+
+## Features
+
++ Fully isolated GitHub [runners] on your [infrastructure][self], through
+  microVM.
++ container-like experience: microVMs boot quickly.
++ No special network configuration
++ Ephemeral runners, i.e. will start from a pristine "empty" state at each run.
++ Secrets isolation to avoid leaking to workflows.
++ Run on amd64 and arm64 platforms, probably able to run on MacOS.
++ Standard "medium-sized" base OS installations (node, python, dev tools, etc.)
++ Run on top of any OCI image -- base "OS" separated from runner installation.
++ Support for registration at the repository, organisation and enterprise level.
++ Support for github.com, but also local installations of the forge.
++ Ability to mount local directories to cache local runner-based requirements or
+  critical software tools.
++ Good compatibility with the regular GitHub [runners]: same user ID, member of
+  the `docker` group, etc.
+
+## Requirements
+
+This project is coded in pure POSIX shell and has only been tested on Linux. The
+images are automatically [built] both for x86_64 and AArch64. However, [krunvm]
+also runs on MacOS. No "esoteric" options have been used when using the standard
+UNIX binary utilities. PRs are welcome to make the project work on MacOS, if it
+does not already.
+
+Apart from the standard UNIX binary utilities, you will need the following
+installed on the host. Installation is easiest on Fedora
+
++ `curl`
++ `jq`
++ `buildah`
++ `krunvm` (and its [requirements])
+
+  [built]: ./.github/workflows/ci.yml
+  [requirements]: https://github.com/containers/krunvm#installation
+
+## Limitations
+
++ Linux host installation easiest on Fedora
++ Runners are (also) based on Fedora. While standard images are based on Fedora,
+  running on top of ubuntu should also be possible.
++ Docker not supported. Replaced by `podman` in emulation mode.
++ No support for docker network, runs in host networking mode only. This is
+  alleviated by a docker [shim](./base/docker.sh)
 
 ## Architecture and Design
 
@@ -101,4 +127,3 @@ runner and then start the actions runner .NET implementation, under the `runner`
 user. The `runner` user shares the same id as the one at GitHub and is also a
 member of the `docker` group. Similarily to GitHub runners, the user is capable
 of `sudo` without a password.
-
