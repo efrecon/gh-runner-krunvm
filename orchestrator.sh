@@ -97,14 +97,17 @@ RUNNER_PAT=${RUNNER_PAT:-""}
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
+# Number of times to repeat the runner loop
+RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
+
 # shellcheck source=lib/common.sh
 . "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_DESCR="Run several krunvm-based GitHub runners on a single host"
+KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
 
 
-while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:r:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       ORCHESTRATOR_CPUS="$OPTARG";;
@@ -136,6 +139,8 @@ while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
       ORCHESTRATOR_NAME="$OPTARG";;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
+    r) # Number of times to repeat the runner loop
+      RUNNER_REPEAT="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
       RUNNER_SCOPE="$OPTARG";;
     T) # Authorization token at the GitHub API to acquire runner token with
@@ -147,7 +152,7 @@ while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
     v) # Increase verbosity, will otherwise log on errors/warnings only
       ORCHESTRATOR_VERBOSE=$((ORCHESTRATOR_VERBOSE+1));;
     h) # Print help and exit
-      usage;;
+      usage 0 "(ORCHESTRATOR|RUNNER)";;
     -) # End of options. Single argument: number of runners to create
       break;;
     ?)
@@ -167,13 +172,6 @@ cleanup() {
   fi
 }
 
-if [ "$#" = 0 ];  then
-  error "You need to specify the number of runners to create"
-fi
-if [ -z "$RUNNER_PAT" ]; then
-  error "You need to specify a PAT to acquire the runner token with"
-fi
-
 check_command buildah
 check_command krunvm
 
@@ -184,7 +182,7 @@ if run_krunvm list | grep -qE "^$ORCHESTRATOR_NAME"; then
 fi
 
 # Remember number of runners
-runners=$1
+runners=${1:-0}
 
 # Create isolation mount point
 if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
@@ -195,7 +193,7 @@ fi
 # Create the VM used for orchestration. Add --volume options for all necessary
 # mappings, i.e. inheritance of "live" code, environment isolation and all
 # requested mount points.
-verbose "Creating $runners micro VM(s) $ORCHESTRATOR_NAME, $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
+verbose "Creating $runners microVM(s) '$ORCHESTRATOR_NAME', $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
 # Note: reset arguments!
 set -- \
   --cpus "$ORCHESTRATOR_CPUS" \
@@ -219,43 +217,51 @@ EOF
 fi
 run_krunvm create "$ORCHESTRATOR_IMAGE" "$@"
 
-# Export all RUNNER_ variables. This works because the 'runner.sh' script that
-# will create VM in loops uses variables prefixed with RUNNER_.
-while IFS= read -r varname; do
-  # shellcheck disable=SC2163 # We want to expand the variable
-  export "$varname"
-done <<EOF
+if [ "$runners" -gt 0 ]; then
+  if [ -z "$RUNNER_PAT" ]; then
+    error "You need to specify a PAT to acquire the runner token with"
+  fi
+
+  # Export all RUNNER_ variables. This works because the 'runner.sh' script that
+  # will create VM in loops uses variables prefixed with RUNNER_.
+  while IFS= read -r varname; do
+    # shellcheck disable=SC2163 # We want to expand the variable
+    export "$varname"
+  done <<EOF
 $(set | grep '^RUNNER_' | sed 's/=.*//')
 EOF
 
-# Pass verbosity and log configuration also
-RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
-RUNNER_LOG=$ORCHESTRATOR_LOG
-export RUNNER_VERBOSE RUNNER_LOG
+  # Pass verbosity and log configuration also
+  RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
+  RUNNER_LOG=$ORCHESTRATOR_LOG
+  export RUNNER_VERBOSE RUNNER_LOG
 
-# Create runner loops in the background. One per runner. Each loop will
-# indefinitely create ephemeral runners. Looping is implemented in runner.sh,
-# in the same directory as this script.
-set --; # Reset arguments
-for i in $(seq 1 "$runners"); do
-  if [ -n "${RUNNER_PAT:-}" ]; then
-    verbose "Creating runner loop $i"
-    "$ORCHESTRATOR_ROOTDIR/runner.sh" \
-      -n "$ORCHESTRATOR_NAME" \
-      -D "$ORCHESTRATOR_DIR" \
-      -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
-      -- "$i" &
-    set -- "$@" "$!"
-    if [ "$i" -lt "$runners" ]; then
-      if [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
-        debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
-        sleep "$ORCHESTRATOR_SLEEP"
+  # Create runner loops in the background. One per runner. Each loop will
+  # indefinitely create ephemeral runners. Looping is implemented in runner.sh,
+  # in the same directory as this script.
+  set --; # Reset arguments
+  for i in $(seq 1 "$runners"); do
+    if [ -n "${RUNNER_PAT:-}" ]; then
+      verbose "Creating runner loop $i"
+      "$ORCHESTRATOR_ROOTDIR/runner.sh" \
+        -n "$ORCHESTRATOR_NAME" \
+        -D "$ORCHESTRATOR_DIR" \
+        -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
+        -- "$i" &
+      set -- "$@" "$!"
+      if [ "$i" -lt "$runners" ]; then
+        if [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
+          debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
+          sleep "$ORCHESTRATOR_SLEEP"
+        fi
       fi
     fi
-  fi
-done
+  done
 
-verbose "Waiting for runners to die"
-for pid in "$@"; do
-  wait "$pid"
-done
+  verbose "Waiting for runners to die"
+  for pid in "$@"; do
+    wait "$pid"
+  done
+else
+  verbose "No runners to create. You can manually create runners with the $ORCHESTRATOR_ROOTDIR/runner.sh script"
+fi

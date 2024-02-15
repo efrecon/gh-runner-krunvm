@@ -65,7 +65,7 @@ while getopts "l:u:vh-" opt; do
     v) # Increase verbosity, will otherwise log on errors/warnings only
       INSTALL_VERBOSE=$((INSTALL_VERBOSE+1));;
     h) # Print help and exit
-      usage;;
+      usage 0 "INSTALL";;
     ?)
       usage 1;;
   esac

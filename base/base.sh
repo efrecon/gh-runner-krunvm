@@ -65,7 +65,7 @@ while getopts "dl:vh-" opt; do
     v) # Increase verbosity, will otherwise log on errors/warnings only
       BASE_VERBOSE=$((BASE_VERBOSE+1));;
     h) # Print help and exit
-      usage;;
+      usage 0 "BASE";;
     ?)
       usage 1;;
   esac

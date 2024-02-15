@@ -128,7 +128,7 @@ while getopts "eE:g:G:i:l:L:n:p:s:t:T:u:Uvh-" opt; do
     v) # Increase verbosity, will otherwise log on errors/warnings only
       RUNNER_VERBOSE=$((RUNNER_VERBOSE+1));;
     h) # Print help and exit
-      usage;;
+      usage 0 "RUNNER";;
     -) # End of options, everything after is executed as a command, as relevant user
       break;;
     ?)
