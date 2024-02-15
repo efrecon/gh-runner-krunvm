@@ -3,22 +3,21 @@
 This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
 [krunvm]. [krunvm] creates [microVM]s, so the project enables fully isolated
 [runners] inside your infrastruture, as opposed to [solutions] based on
-Kubernetes or Docker containers. MicroVMs boot quickly, providing an experience
-close to running containers. [krunvm] creates and starts VM based on the OCI
-[images] created for this project. In theory, these images should be able to be
-used in more traditional container-based solutions.
+Kubernetes or Docker containers. MicroVMs boot fast, providing an experience
+close to running containers. [krunvm] creates and starts VM based on the
+multi-platform OCI [images][image] created for this project.
 
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
   [krunvm]: https://github.com/containers/krunvm
   [microVM]: https://github.com/infracloudio/awesome-microvm
   [solutions]: https://github.com/jonico/awesome-runners
-  [images]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm
+  [image]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm
 
 ## Example
 
 Provided you are at the root directory of this project, the following would
-create two runners that are bound to this repository (the
+create two runners that are bound to *this* repository (the
 `efrecon/gh-runner-krunvm` principal). Runners can also be registered at the
 `organization` or `enterprise` scope using the `-s` option. In the example
 below, the value of the `-T` option should be a [PAT].
@@ -27,19 +26,23 @@ below, the value of the `-T` option should be a [PAT].
 ./orchestrator.sh -v -T ghp_XXXX -p efrecon/gh-runner-krunvm -- 2
 ```
 
-The project tries to have good default options and behaviour. For example, nor
-the value of the token, nor the value of the runner registration token will be
-visible to the workflows using your runners. The default is to create far-less
-capable runners than the GitHub [runners], i.e. 1G or memory and 2 vCPUs. By
-default, runners have random names and carry labels with the name of the base
-repository, e.g. `fedora` and `krunvm`. The GitHub runner implementation will
-automatically add other labels in addition to those.
+The project tries to have good default options and behaviour -- run with `-h`
+for a list of options. For example, nor the value of the token, nor the value of
+the runner registration token will be visible to the workflows using your
+runners. The default is however to create far-less capable runners than the
+GitHub [runners], i.e. 1G or memory and 2 vCPUs. By default, runners have random
+names and carry labels with the name of the base repository, e.g. `fedora` and
+`krunvm`. The GitHub runner implementation will automatically add other labels
+in addition to those.
 
 All scripts within the project accepts short options only and can either be
-controlled through options or environment variables. Variables starting with
-`ORCHESTRATOR_` will affect the behaviour or the [orchestrator], while variables
+controlled through options or environment variables. Running with the `-h`
+option will provide help and a list of those variables. Variables starting with
+`ORCHESTRATOR_` will affect the behaviour of the [orchestrator], while variables
 starting with `RUNNER_` will affect the behaviour of each runner. Usually, the
-only script that you will be using is the [orchestrator](./orchestrator.sh).
+only script that you will be using is the [orchestrator](./orchestrator.sh). But
+it is possible to create the microVM with the orchestrator and manually run
+loops using the [runner](./runner.sh) script.
 
   [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 
@@ -60,6 +63,10 @@ only script that you will be using is the [orchestrator](./orchestrator.sh).
   critical software tools.
 + Good compatibility with the regular GitHub [runners]: same user ID, member of
   the `docker` group, etc.
++ In theory, the main [image] should be able to be used in more traditional
+  container-based solutions -- perhaps [sysbox]? Reports/changes are welcome.
+
+  [sysbox]: https://github.com/nestybox/sysbox
 
 ## Requirements
 
@@ -85,9 +92,13 @@ installed on the host. Installation is easiest on Fedora
 + Linux host installation easiest on Fedora
 + Runners are (also) based on Fedora. While standard images are based on Fedora,
   running on top of ubuntu should also be possible.
-+ Docker not supported. Replaced by `podman` in emulation mode.
-+ No support for docker network, runs in host networking mode only. This is
-  alleviated by a docker [shim](./base/docker.sh)
++ Inside the runners: Docker not supported. Replaced by `podman` in [emulation]
+  mode.
++ Inside the runners: No support for docker network, containers run in "host"
+  (but: inside the microVM) networking mode only. This is alleviated by a docker
+  [shim](./base/docker.sh)
+
+  [emulation]: https://docs.podman.io/en/latest/markdown/podman-system-service.1.html
 
 ## Architecture and Design
 
@@ -119,7 +130,7 @@ docker CLI [wrapper](./base/docker.sh) that will automatically add this option
 to all (relevant) commands.
 
 When the microVM starts, the [runner.sh](./runner/runner.sh) script will be
-started. This script will pick its options using an `.env` file shared from the
+started. This script will pick its options using an `.env` file, shared from the
 host. The file will be sourced and removed at once. This ensures that secrets
 are not leaked to the workflows through the process table or a file. Upon start,
 the script will [request](./runner/token.sh) a runner token, configure the
@@ -127,3 +138,11 @@ runner and then start the actions runner .NET implementation, under the `runner`
 user. The `runner` user shares the same id as the one at GitHub and is also a
 member of the `docker` group. Similarily to GitHub runners, the user is capable
 of `sudo` without a password.
+
+## History
+
+This project was written to combat my anxeity combatting my daughter's newly
+discovered eating disorder. It started as a rewrite of [this] project after
+having failed to run those images inside the microVMs generated by [krunvm].
+
+  [this]: https://github.com/myoung34/docker-github-actions-runner
