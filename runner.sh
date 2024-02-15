@@ -79,6 +79,9 @@ RUNNER_ENVIRONMENT=${RUNNER_ENVIRONMENT:-""}
 # this, since the much preferred behaviour is to run ephemeral runners.
 RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"1"}
 
+# Number of times to repeat the runner loop
+RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
+
 # shellcheck source=lib/common.sh
 . "$RUNNER_ROOTDIR/lib/common.sh"
 
@@ -86,7 +89,7 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"1"}
 KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
-while getopts "D:E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
+while getopts "D:E:g:G:l:L:M:n:p:r:s:T:u:Uvh-" opt; do
   case "$opt" in
     D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
       RUNNER_DIR=$OPTARG;;
@@ -106,6 +109,8 @@ while getopts "D:E:g:G:l:L:M:n:p:s:T:u:Uvh-" opt; do
       RUNNER_NAME="$OPTARG";;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
+    r) # Number of times to repeat the runner loop
+      RUNNER_REPEAT="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
       RUNNER_SCOPE="$OPTARG";;
     T) # Authorization token at the GitHub API to acquire runner token with
@@ -144,6 +149,7 @@ else
   runner=${RUNNER_DIR%/}/runner/runner.sh
 fi
 
+iteration=0
 while true; do
   id=$(random_string)
   RUNNER_ID=${loop}-${id}
@@ -177,4 +183,12 @@ EOF
     done
   fi
   run_krunvm start "$RUNNER_NAME" "$runner" -- "$@"
+
+  if [ "$RUNNER_REPEAT" -gt 0 ]; then
+    iteration=$((iteration+1))
+    if [ "$iteration" -ge "$RUNNER_REPEAT" ]; then
+      verbose "Reached maximum number of iterations ($RUNNER_REPEAT)"
+      break
+    fi
+  fi
 done

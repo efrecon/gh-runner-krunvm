@@ -97,6 +97,9 @@ RUNNER_PAT=${RUNNER_PAT:-""}
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
+# Number of times to repeat the runner loop
+RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
+
 # shellcheck source=lib/common.sh
 . "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
 
@@ -104,7 +107,7 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
 
 
-while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:r:s:t:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       ORCHESTRATOR_CPUS="$OPTARG";;
@@ -136,6 +139,8 @@ while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:s:t:T:u:Uvh-" opt; do
       ORCHESTRATOR_NAME="$OPTARG";;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
+    r) # Number of times to repeat the runner loop
+      RUNNER_REPEAT="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
       RUNNER_SCOPE="$OPTARG";;
     T) # Authorization token at the GitHub API to acquire runner token with
