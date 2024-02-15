@@ -4,7 +4,7 @@ This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
 [krunvm]. [krunvm] creates [microVM]s, so the project enables fully isolated
 [runners] inside your infrastruture, as opposed to [solutions] based on
 Kubernetes or Docker containers. MicroVMs boot fast, providing an experience
-close to running containers. [krunvm] creates and starts VM based on the
+close to running containers. [krunvm] creates and starts VMs based on the
 multi-platform OCI [images][image] created for this project.
 
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
@@ -38,11 +38,12 @@ in addition to those.
 All scripts within the project accepts short options only and can either be
 controlled through options or environment variables. Running with the `-h`
 option will provide help and a list of those variables. Variables starting with
-`ORCHESTRATOR_` will affect the behaviour of the [orchestrator], while variables
-starting with `RUNNER_` will affect the behaviour of each runner. Usually, the
-only script that you will be using is the [orchestrator](./orchestrator.sh). But
-it is possible to create the microVM with the orchestrator and manually run
-loops using the [runner](./runner.sh) script.
+`ORCHESTRATOR_` will affect the behaviour of the
+[orchestrator](./orchestrator.sh), while variables starting with `RUNNER_` will
+affect the behaviour of each runner. Usually, the only script that you will have
+to use is the [orchestrator](./orchestrator.sh). However, it is possible to
+create the microVM with the orchestrator and manually run loops using the
+[runner](./runner.sh) script.
 
   [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 
