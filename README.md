@@ -17,10 +17,13 @@ multi-platform OCI [images][image] created for this project.
 ## Example
 
 Provided you are at the root directory of this project, the following would
-create two runners that are bound to *this* repository (the
+create two runner loops that are bound to *this* repository (the
 `efrecon/gh-runner-krunvm` principal). Runners can also be registered at the
 `organization` or `enterprise` scope using the `-s` option. In the example
-below, the value of the `-T` option should be a [PAT].
+below, the value of the `-T` option should be a [PAT]. In each loop, as soon as
+one job has been picked up and executed, a new pristine runner will be created
+and registered.
+
 
 ```bash
 ./orchestrator.sh -v -T ghp_XXXX -p efrecon/gh-runner-krunvm -- 2
