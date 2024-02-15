@@ -73,7 +73,7 @@ while getopts "g:l:p:s:T:vh-" opt; do
     v) # Increase verbosity, will otherwise log on errors/warnings only
       TOKEN_VERBOSE=$((TOKEN_VERBOSE+1));;
     h) # Print help and exit
-      usage;;
+      usage 0 "TOKEN";;
     ?)
       usage 1;;
   esac

@@ -43,6 +43,10 @@ usage() {
     grep "[[:space:]].) #" "$0" |
     sed 's/#//' |
     sed -r 's/([a-zA-Z-])\)/-\1/'
+  if [ -n "${2:-}" ]; then
+    printf '\nCurrent state:\n'
+    set | grep -E "^${2}_" | sed -E 's/^([A-Z])/  \1/g'
+  fi
   exit "${1:-0}"
 }
 
