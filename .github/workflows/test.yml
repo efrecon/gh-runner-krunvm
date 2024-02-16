@@ -1,4 +1,4 @@
-name: dev
+name: test
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
       - name: test
         run: |
           echo "Shared environment storage:"
-          ls -l /_environment
+          ls -l /_environment || true
           echo ""
           echo "Process list"
           ps -edalf
