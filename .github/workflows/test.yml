@@ -1,0 +1,23 @@
+name: dev
+
+on:
+  push:
+    branches:
+      - feature/*
+
+jobs:
+  test:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: test
+        run: |
+          echo "Shared environment storage:"
+          ls -l /_environment
+          echo ""
+          echo "Process list"
+          ps -edalf
+          echo ""
+          echo "RUNNER_ variables"
+          env | grep RUNNER_
