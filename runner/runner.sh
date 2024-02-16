@@ -227,6 +227,7 @@ runner_configure() {
 runner_unregister() {
   trap - INT TERM EXIT
 
+  # Remember or request (again) a runner registration token
   verbose "Caught termination signal, unregistering runner"
   if [ -n "${RUNNER_PAT:-}" ]; then
     if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -f "$RUNNER_TOKENFILE" ]; then
@@ -245,14 +246,22 @@ runner_unregister() {
                         -T "$RUNNER_PAT" )
     fi
   fi
+
+  # Remove the runner from GitHub
   verbose "Removing runner at GitHub"
   runner_control config.sh remove --token "$RUNNER_TOKEN"
 
+  # Remove the runner token file, this is so callers can detect removal and act
+  # accordingly -- if necessary.
   if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -f "$RUNNER_TOKENFILE" ]; then
     rm -f "$RUNNER_TOKENFILE"
     verbose "Removed runner token file at $RUNNER_TOKENFILE"
   fi
 
+  # Create a break file to signal that the external runner loop that creates
+  # microVMs should stop doing so. Do this when the argument to this function is
+  # 1 only, i.e. don't break the loop on regular EXIT signals, but break on INT
+  # or TERM (i.e. ctrl-c or kill).
   if [ "${1:-0}" = 1 ] && [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
     printf %s\\n "$RUNNER_SECRET" > "${RUNNER_TOKENFILE%.*}.brk"
   fi
@@ -393,7 +402,9 @@ if [ "$#" = 0 ]; then
   set -- "${RUNNER_WORKDIR%/}/runner/bin/Runner.Listener" run --startuptype service
 fi
 
-# Capture termination signals
+# Capture termination signals. Pass a boolean to runner_unregister: don't break
+# the runners microVM creation loop on regular EXIT signals, but break on INT or
+# TERM (i.e. ctrl-c or kill).
 trap 'runner_unregister 1' INT TERM
 trap 'runner_unregister 0' EXIT
 
@@ -403,7 +414,8 @@ if is_true "$RUNNER_DOCKER"; then
   docker_daemon
 fi
 
-verbose "Starting runner as '$RUNNER_USER' (id=$(id -un)): $*"
+# Start the runner.
+verbose "Starting runner as user '$RUNNER_USER' (current user=$(id -un)): $*"
 case "$RUNNER_USER" in
   root)
     if [ "$(id -u)" = "0" ]; then
