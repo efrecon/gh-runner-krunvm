@@ -26,6 +26,13 @@ abspath() {
   fi
 }
 
+# Resolve the root directory hosting this script to an absolute path, symbolic
+# links resolved.
+BASE_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
+
+# shellcheck source=../lib/common.sh
+. "$BASE_ROOTDIR/../lib/common.sh"
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 BASE_VERBOSE=${BASE_VERBOSE:-0}
@@ -44,14 +51,7 @@ BASE_GID=${BASE_GID:-121}
 # Name of the "sudo" group - wheel on Fedora, sudo on Ubuntu
 BASE_SUDO=${BASE_SUDO:-"wheel"}
 
-# Resolve the root directory hosting this script to an absolute path, symbolic
-# links resolved.
-BASE_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
-
 BASE_DOCKER_WRAPPER=${BASE_DOCKER_WRAPPER:-$BASE_ROOTDIR/docker.sh}
-
-# shellcheck source=../lib/common.sh
-. "$BASE_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Install a base GitHub runner environment in Fedora"
