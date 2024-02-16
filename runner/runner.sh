@@ -79,6 +79,9 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"0"}
 # Root installation of the runner
 RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/gh-runner-krunvm/share/runner"}
 
+# Permit several installations
+RUNNER_MULTI=${RUNNER_MULTI:-"0"}
+
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
@@ -153,13 +156,22 @@ KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 # minimal verification of the installation through checking that there is a
 # config.sh script executable within the copy.
 runner_install() {
-  # Make a directory where to install a copy of the runner.
-  if ! [ -d "${RUNNER_WORKDIR%/}/runner" ]; then
-    mkdir -p "${RUNNER_WORKDIR%/}/runner"
-    verbose "Created runner directory ${RUNNER_WORKDIR%/}/runner"
+  if [ "$RUNNER_MULTI" = 1 ]; then
+    # Make a directory where to install a copy of the runner.
+    if ! [ -d "${RUNNER_WORKDIR%/}/runner" ]; then
+      mkdir -p "${RUNNER_WORKDIR%/}/runner"
+      verbose "Created runner directory ${RUNNER_WORKDIR%/}/runner"
+    fi
+    verbose "Installing runner in ${RUNNER_WORKDIR%/}/runner"
+    tar -C "${RUNNER_WORKDIR%/}/runner" -zxf "$RUNNER_TAR"
+  else
+    if ! [ -d "${RUNNER_WORKDIR%/}" ]; then
+      mkdir -p "${RUNNER_WORKDIR%/}"
+      verbose "Created runner directory ${RUNNER_WORKDIR%/}"
+    fi
+    verbose "Moving runner installation to ${RUNNER_WORKDIR%/}/runner"
+    mv -f "$RUNNER_INSTDIR" "${RUNNER_WORKDIR%/}/runner" 2>/dev/null
   fi
-  verbose "Installing runner in ${RUNNER_WORKDIR%/}/runner"
-  tar -C "${RUNNER_WORKDIR%/}/runner" -zxf "$RUNNER_TAR"
   check_command "${RUNNER_WORKDIR%/}/runner/config.sh"
 }
 
@@ -367,9 +379,13 @@ else
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
 fi
 
-RUNNER_TAR=$(find "$RUNNER_INSTALL" -type f -name "*.tgz" | sort -r | head -n 1)
+RUNNER_TAR=$(find_pattern "${RUNNER_INSTALL}/*.tgz" f | sort -r | head -n 1)
 if [ -z "$RUNNER_TAR" ]; then
   error "No runner tar file found under $RUNNER_INSTALL"
+fi
+RUNNER_INSTDIR=$(find_pattern "${RUNNER_INSTALL}/runner-*" d | sort -r | head -n 1)
+if [ -z "$RUNNER_INSTDIR" ]; then
+  error "No runner installation directory found under $RUNNER_INSTALL"
 fi
 
 # Construct the runner URL, i.e. where the runner will be registered
