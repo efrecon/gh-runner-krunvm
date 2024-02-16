@@ -29,6 +29,9 @@ abspath() {
 # links resolved.
 INSTALL_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
 
+# shellcheck source=../lib/common.sh
+. "$INSTALL_ROOTDIR/../lib/common.sh"
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 INSTALL_VERBOSE=${INSTALL_VERBOSE:-0}
@@ -49,9 +52,6 @@ INSTALL_DIRECTORIES=${INSTALL_DIRECTORIES:-"/_work $INSTALL_TOOL_CACHE $INSTALL_
 
 # User to change ownership of directories to
 INSTALL_USER=${INSTALL_USER:-runner}
-
-# shellcheck source=../lib/common.sh
-. "$INSTALL_ROOTDIR/../lib/common.sh"
 
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Install the GitHub runner"

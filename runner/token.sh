@@ -109,6 +109,7 @@ case "$TOKEN_SCOPE" in
 esac
 TOKEN_URL=${TOKEN_URL}/${TOKEN_PRINCIPAL}/actions/runners/registration-token
 
+verbose "Requesting runner token from ${TOKEN_URL}"
 curl \
   -fsSL \
   -XPOST \

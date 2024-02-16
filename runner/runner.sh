@@ -30,6 +30,9 @@ abspath() {
 # links resolved.
 RUNNER_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
 
+# shellcheck source=../lib/common.sh
+. "$RUNNER_ROOTDIR/../lib/common.sh"
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 RUNNER_VERBOSE=${RUNNER_VERBOSE:-0}
@@ -86,16 +89,14 @@ RUNNER_ENVFILE=${RUNNER_ENVFILE:-""}
 # Identifier of the runner (used in logs)
 RUNNER_ID=${RUNNER_ID:-""}
 
-RUNNER_TOOL_CACHE=${RUNNER_TOOL_CACHE:-"${AGENT_TOOLSDIRECTORY:-"/opt/hostedtoolcache"}"}
-
-# shellcheck source=../lib/common.sh
-. "$RUNNER_ROOTDIR/../lib/common.sh"
+# Location of a file where to store the token
+RUNNER_TOKENFILE=${RUNNER_TOKENFILE:-""}
 
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Configure and run the installed GitHub runner"
 
 
-while getopts "eE:g:G:i:l:L:n:p:s:t:T:u:Uvh-" opt; do
+while getopts "eE:g:G:i:k:l:L:n:p:s:S:t:T:u:Uvh-" opt; do
   case "$opt" in
     e) # Ephemeral runner
       RUNNER_EPHEMERAL=1;;
@@ -107,6 +108,8 @@ while getopts "eE:g:G:i:l:L:n:p:s:t:T:u:Uvh-" opt; do
       RUNNER_GROUP="$OPTARG";;
     i) # Identifier of the runner (used in logs and to name the runner)
       RUNNER_ID="$OPTARG";;
+    k) # Location of a file where to store the token
+      RUNNER_TOKENFILE="$OPTARG";;
     l) # Where to send logs
       RUNNER_LOG="$OPTARG";;
     L) # Comma separated list of labels to attach to the runner
@@ -211,24 +214,57 @@ runner_configure() {
   # Configure the runner from the installation copy
   verbose "Configuring runner ${RUNNER_NAME}..."
   runner_control config.sh "$@"
+
+  # Store runner registration token in a file, if set
+  if [ -n "${RUNNER_TOKENFILE:-}" ]; then
+    verbose "Storing runner token in $RUNNER_TOKENFILE"
+    printf %s\\n "$RUNNER_TOKEN" > "$RUNNER_TOKENFILE"
+  fi
 }
 
 
 # Unregister the runner from GitHub. This will use the runner installation copy
 runner_unregister() {
+  trap - INT TERM EXIT
+
+  # Remember or request (again) a runner registration token
   verbose "Caught termination signal, unregistering runner"
   if [ -n "${RUNNER_PAT:-}" ]; then
-    verbose "Requesting (back) runner token with PAT"
-    RUNNER_TOKEN=$( TOKEN_VERBOSE=$RUNNER_VERBOSE \
-                    "$RUNNER_ROOTDIR/token.sh" \
-                      -g "$RUNNER_GITHUB" \
-                      -l "$RUNNER_LOG" \
-                      -p "$RUNNER_PRINCIPAL" \
-                      -s "$RUNNER_SCOPE" \
-                      -T "$RUNNER_PAT" )
+    if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -f "$RUNNER_TOKENFILE" ]; then
+      verbose "Reading runner token from $RUNNER_TOKENFILE"
+      RUNNER_TOKEN=$(cat "$RUNNER_TOKENFILE")
+    fi
+
+    if [ -z "${RUNNER_TOKEN:-}" ]; then
+      verbose "Requesting (back) runner token with PAT"
+      RUNNER_TOKEN=$( TOKEN_VERBOSE=$RUNNER_VERBOSE \
+                      "$RUNNER_ROOTDIR/token.sh" \
+                        -g "$RUNNER_GITHUB" \
+                        -l "$RUNNER_LOG" \
+                        -p "$RUNNER_PRINCIPAL" \
+                        -s "$RUNNER_SCOPE" \
+                        -T "$RUNNER_PAT" )
+    fi
   fi
+
+  # Remove the runner from GitHub
   verbose "Removing runner at GitHub"
   runner_control config.sh remove --token "$RUNNER_TOKEN"
+
+  # Remove the runner token file, this is so callers can detect removal and act
+  # accordingly -- if necessary.
+  if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -f "$RUNNER_TOKENFILE" ]; then
+    rm -f "$RUNNER_TOKENFILE"
+    verbose "Removed runner token file at $RUNNER_TOKENFILE"
+  fi
+
+  # Create a break file to signal that the external runner loop that creates
+  # microVMs should stop doing so. Do this when the argument to this function is
+  # 1 only, i.e. don't break the loop on regular EXIT signals, but break on INT
+  # or TERM (i.e. ctrl-c or kill).
+  if [ "${1:-0}" = 1 ] && [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
+    printf %s\\n "$RUNNER_SECRET" > "${RUNNER_TOKENFILE%.*}.brk"
+  fi
 }
 
 
@@ -337,8 +373,8 @@ if [ -z "$RUNNER_TAR" ]; then
 fi
 
 # Construct the runner URL, i.e. where the runner will be registered
-debug "Constructing runner URL"
 RUNNER_SCOPE=$(to_lower "$RUNNER_SCOPE")
+debug "Constructing $RUNNER_SCOPE runner URL"
 case "$RUNNER_SCOPE" in
   rep*)
     RUNNER_URL="https://${RUNNER_GITHUB%/}/${RUNNER_PRINCIPAL}"
@@ -366,8 +402,11 @@ if [ "$#" = 0 ]; then
   set -- "${RUNNER_WORKDIR%/}/runner/bin/Runner.Listener" run --startuptype service
 fi
 
-# Capture termination signals
-trap runner_unregister INT TERM QUIT
+# Capture termination signals. Pass a boolean to runner_unregister: don't break
+# the runners microVM creation loop on regular EXIT signals, but break on INT or
+# TERM (i.e. ctrl-c or kill).
+trap 'runner_unregister 1' INT TERM
+trap 'runner_unregister 0' EXIT
 
 # Start the docker daemon. Prefer podman if available (it will be the only one
 # available, unless the dockerd is installed in the future)
@@ -375,7 +414,8 @@ if is_true "$RUNNER_DOCKER"; then
   docker_daemon
 fi
 
-verbose "Starting runner as '$RUNNER_USER' (id=$(id -un)): $*"
+# Start the runner.
+verbose "Starting runner as user '$RUNNER_USER' (current user=$(id -un)): $*"
 case "$RUNNER_USER" in
   root)
     if [ "$(id -u)" = "0" ]; then
@@ -388,8 +428,7 @@ case "$RUNNER_USER" in
     if id "$RUNNER_USER" >/dev/null 2>&1; then
       if [ "$(id -u)" = "0" ]; then
         verbose "Starting runner as $RUNNER_USER"
-        chown -R "$RUNNER_USER" "$RUNNER_INSTALL" "$RUNNER_WORKDIR"
-        chown "$RUNNER_USER" "$RUNNER_TOOL_CACHE"
+        chown -R "$RUNNER_USER" "$RUNNER_WORKDIR"
         runas "$@"
       elif [ "$(id -un)" = "$RUNNER_USER" ]; then
         "$@"

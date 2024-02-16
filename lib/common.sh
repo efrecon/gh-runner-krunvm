@@ -75,17 +75,27 @@ run_krunvm() {
   buildah unshare krunvm "$@"
 }
 
+
+find_pattern() {
+  _type=$(to_lower "${2:-f}")
+  find "$(dirname "$1")/" \
+    -maxdepth 1 \
+    -name "$(basename "$1")" \
+    -type "${_type#-}" 2>/dev/null
+}
+
+
 # Wait for a path to exist
-# $1 is the test to perform, e.g. -f for file, -d for directory, etc.
-# $2 is the path to wait for
+# $1 is the test to perform, e.g. -f for file (default), -d for directory, etc.
+# $2 is the path/pattern to wait for
 # $3 is the timeout in seconds
 # $4 is the interval in seconds
 wait_path() {
   _interval="${4:-1}"
   _elapsed=0
 
-  while ! test "$1" "$2"; do
-    if [ "$_elapsed" -ge "${3:-60}" ]; then
+  while [ -z "$(find_pattern "$2" "$1")" ]; do
+    if [ "${3:-60}" -gt 0 ] && [ "$_elapsed" -ge "${3:-60}" ]; then
       error "Timeout waiting for $2"
     fi
     _elapsed=$((_elapsed+_interval))
@@ -93,6 +103,7 @@ wait_path() {
     debug "Waiting for $2"
   done
 }
+
 
 # PML: Poor Man's Logging
 _log() {
