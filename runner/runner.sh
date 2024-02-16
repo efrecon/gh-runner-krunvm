@@ -80,7 +80,7 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"0"}
 RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/gh-runner-krunvm/share/runner"}
 
 # Permit several installations
-RUNNER_MULTI=${RUNNER_MULTI:-"0"}
+RUNNER_MULTI=${RUNNER_MULTI:-"1"}
 
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
