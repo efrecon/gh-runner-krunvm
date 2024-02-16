@@ -253,7 +253,7 @@ runner_unregister() {
     verbose "Removed runner token file at $RUNNER_TOKENFILE"
   fi
 
-  if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
+  if [ "${1:-0}" = 1 ] && [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
     printf %s\\n "$RUNNER_SECRET" > "${RUNNER_TOKENFILE%.*}.brk"
   fi
 }
@@ -394,7 +394,8 @@ if [ "$#" = 0 ]; then
 fi
 
 # Capture termination signals
-trap runner_unregister INT TERM EXIT
+trap 'runner_unregister 1' INT TERM
+trap 'runner_unregister 0' EXIT
 
 # Start the docker daemon. Prefer podman if available (it will be the only one
 # available, unless the dockerd is installed in the future)
