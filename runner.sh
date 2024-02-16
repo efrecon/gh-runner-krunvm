@@ -29,6 +29,9 @@ abspath() {
 # links resolved.
 RUNNER_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
 
+# shellcheck source=lib/common.sh
+. "$RUNNER_ROOTDIR/lib/common.sh"
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 RUNNER_VERBOSE=${RUNNER_VERBOSE:-0}
@@ -82,14 +85,14 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"1"}
 # Number of times to repeat the runner loop
 RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
 
-# shellcheck source=lib/common.sh
-. "$RUNNER_ROOTDIR/lib/common.sh"
+# Secret to be used to request for loop end. Good default is a random string.
+RUNNER_SECRET=${RUNNER_SECRET:-"$(random_string)"}
 
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
-while getopts "D:E:g:G:l:L:M:n:p:r:s:T:u:Uvh-" opt; do
+while getopts "D:E:g:G:l:L:M:n:p:r:s:S:T:u:Uvh-" opt; do
   case "$opt" in
     D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
       RUNNER_DIR=$OPTARG;;
@@ -113,6 +116,8 @@ while getopts "D:E:g:G:l:L:M:n:p:r:s:T:u:Uvh-" opt; do
       RUNNER_REPEAT="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
       RUNNER_SCOPE="$OPTARG";;
+    S) # Secret to be used to request for loop end
+      RUNNER_SECRET="$OPTARG";;
     T) # Authorization token at the GitHub API to acquire runner token with
       RUNNER_PAT="$OPTARG";;
     u) # User to run the runner as
@@ -165,7 +170,11 @@ while true; do
 $(set | grep '^RUNNER_' | grep -vE '(ROOTDIR|ENVIRONMENT|NAME|MOUNT)')
 EOF
 
+    # Pass the location of the env. file to the runner script
     set -- -E "/_environment/${RUNNER_ID}.env"
+
+    # Also pass the location of a file that will contain the token.
+    set -- -k "/_environment/${RUNNER_ID}.tkn" "$@"
   else
     set -- \
         -e \
@@ -176,6 +185,7 @@ EOF
         -L "$RUNNER_LABELS" \
         -p "$RUNNER_PRINCIPAL" \
         -s "$RUNNER_SCOPE" \
+        -S "$RUNNER_SECRET" \
         -T "$RUNNER_PAT" \
         -u "$RUNNER_USER"
     for _ in $(seq 1 "$RUNNER_VERBOSE"); do
@@ -189,6 +199,18 @@ EOF
     if [ "$iteration" -ge "$RUNNER_REPEAT" ]; then
       verbose "Reached maximum number of iterations ($RUNNER_REPEAT)"
       break
+    fi
+  fi
+
+  if [ -n "$RUNNER_ENVIRONMENT" ]; then
+    if [ -f "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.brk" ]; then
+      break=$(cat "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.brk")
+      if [ "$break" = "$RUNNER_SECRET" ]; then
+        verbose "Break file found, stopping runner loop"
+        break
+      else
+        warning "Break file found at ${RUNNER_ENVIRONMENT}/${RUNNER_ID}.brk, but it does not match the secret"
+      fi
     fi
   fi
 done

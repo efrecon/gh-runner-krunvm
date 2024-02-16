@@ -29,6 +29,9 @@ abspath() {
 # links resolved.
 ORCHESTRATOR_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" && pwd -P )
 
+# shellcheck source=lib/common.sh
+. "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
+
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
 ORCHESTRATOR_VERBOSE=${ORCHESTRATOR_VERBOSE:-0}
@@ -100,15 +103,14 @@ RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 # Number of times to repeat the runner loop
 RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
 
-# shellcheck source=lib/common.sh
-. "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
-
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
 
 
-while getopts "c:d:D:g:G:i:Il:L:m:M:n:p:r:s:t:T:u:Uvh-" opt; do
+while getopts "a:c:d:D:g:G:i:Il:L:m:M:n:p:r:s:t:T:u:Uvh-" opt; do
   case "$opt" in
+    a) # Number of seconds to sleep between microVM creation at start, when no isolation
+      ORCHESTRATOR_SLEEP="$OPTARG";;
     c) # Number of CPUs to allocate to the VM
       ORCHESTRATOR_CPUS="$OPTARG";;
     d) # DNS server to use in VM
@@ -166,6 +168,7 @@ KRUNVM_RUNNER_LOG=$ORCHESTRATOR_LOG
 KRUNVM_RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 
 cleanup() {
+  trap - INT TERM EXIT
   if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
     verbose "Removing isolation environment $ORCHESTRATOR_ENVIRONMENT"
     rm -rf "$ORCHESTRATOR_ENVIRONMENT"
@@ -187,7 +190,7 @@ runners=${1:-0}
 # Create isolation mount point
 if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
   ORCHESTRATOR_ENVIRONMENT=$(mktemp -d)
-  trap cleanup INT TERM QUIT
+  trap cleanup INT TERM EXIT
 fi
 
 # Create the VM used for orchestration. Add --volume options for all necessary
@@ -249,8 +252,18 @@ EOF
         -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
         -- "$i" &
       set -- "$@" "$!"
+
+      # Wait for runner to be ready or have progresses somewhat before starting
+      # the next one.
       if [ "$i" -lt "$runners" ]; then
-        if [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
+        # Wait for the runner token to be ready before starting the next runner,
+        # or sleep for some time.
+        if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
+          wait_path -f "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn" -1 5
+          token=$(find_pattern "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn")
+          rm -f "$token"
+          verbose "Removed token file $token"
+        elif [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
           debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
           sleep "$ORCHESTRATOR_SLEEP"
         fi
