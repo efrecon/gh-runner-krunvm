@@ -51,11 +51,11 @@ RUNNER_MEMORY=${RUNNER_MEMORY:-"1024"}
 RUNNER_CPUS=${RUNNER_CPUS:-"2"}
 
 # DNS to use on the VM. This is the same as the default in krunvm.
-RUNNER_DNS=${ORCHESTRATOR_DNS:-"1.1.1.1"}
+RUNNER_DNS=${RUNNER_DNS:-"1.1.1.1"}
 
 # Host->VM mount points, lines containing pairs of directory mappings separated
 # by a colon.
-RUNNER_MOUNT=${ORCHESTRATOR_MOUNT:-""}
+RUNNER_MOUNT=${RUNNER_MOUNT:-""}
 
 # Name of top directory in VM where to host a copy of the root directory of this
 # script. When this is set, the runner starter script from that directory will
