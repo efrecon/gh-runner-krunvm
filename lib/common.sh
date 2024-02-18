@@ -33,7 +33,7 @@ is_true() {
 
 # shellcheck disable=SC2120 # Function has good default.
 random_string() {
-  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-12}"
+  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-7}"
 }
 
 usage() {
