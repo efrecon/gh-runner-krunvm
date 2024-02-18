@@ -39,6 +39,30 @@ RUNNER_VERBOSE=${RUNNER_VERBOSE:-0}
 # Where to send logs
 RUNNER_LOG=${RUNNER_LOG:-2}
 
+# Name of the OCI image (fully-qualified) to use. You need to have access.
+RUNNER_IMAGE=${RUNNER_IMAGE:-"ghcr.io/efrecon/runner-krunvm:main"}
+
+# Memory to allocate to the VM (in MB). Regular runners use more than the
+# default.
+RUNNER_MEMORY=${RUNNER_MEMORY:-"1024"}
+
+# Number of vCPUs to allocate to the VM. Regular runners use more than the
+# default.
+RUNNER_CPUS=${RUNNER_CPUS:-"2"}
+
+# DNS to use on the VM. This is the same as the default in krunvm.
+RUNNER_DNS=${RUNNER_DNS:-"1.1.1.1"}
+
+# Host->VM mount points, lines containing pairs of directory mappings separated
+# by a colon.
+RUNNER_MOUNT=${RUNNER_MOUNT:-""}
+
+# Name of top directory in VM where to host a copy of the root directory of this
+# script. When this is set, the runner starter script from that directory will
+# be used -- instead of the one already in the OCI image. This option is mainly
+# usefull for development and testing.
+RUNNER_DIR=${RUNNER_DIR:-""}
+
 # GitHub host, e.g. github.com or github.example.com
 RUNNER_GITHUB=${RUNNER_GITHUB:-"github.com"}
 
@@ -64,8 +88,8 @@ RUNNER_PAT=${RUNNER_PAT:-""}
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
-# Name of the microVM to run from
-RUNNER_NAME=${RUNNER_NAME:-"runner"}
+# Prefix to use for the VM names. The VM name will be $RUNNER_PREFIX-xxx
+RUNNER_PREFIX=${RUNNER_PREFIX:-"GH-runner"}
 
 # Name of top directory in VM where to host a copy of the root directory of this
 # script. When this is set, the runner starter script from that directory will
@@ -92,24 +116,32 @@ RUNNER_SECRET=${RUNNER_SECRET:-"$(random_string)"}
 KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
-while getopts "D:E:g:G:l:L:M:n:p:r:s:S:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:l:L:m:M:p:r:s:S:T:u:Uvh-" opt; do
   case "$opt" in
+    c) # Number of CPUs to allocate to the VM
+      RUNNER_CPUS="$OPTARG";;
+    d) # DNS server to use in VM
+      RUNNER_DNS=$OPTARG;;
     D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
       RUNNER_DIR=$OPTARG;;
-    E) # Location (at host) where to place environment files for each run.
-      RUNNER_ENVIRONMENT="$OPTARG";;
     g) # GitHub host, e.g. github.com or github.example.com
       RUNNER_GITHUB="$OPTARG";;
     G) # Group to attach the runner to
       RUNNER_GROUP="$OPTARG";;
+    i) # Name of the OCI image (fully-qualified) to use. You need to have access.
+      RUNNER_IMAGE="$OPTARG";;
     l) # Where to send logs
       RUNNER_LOG="$OPTARG";;
     L) # Comma separated list of labels to attach to the runner
       RUNNER_LABELS="$OPTARG";;
-    M) # Mount passed to the microVM
-      RUNNER_MOUNT="$OPTARG";;
-    n) # Name of the microVM to run from
-      RUNNER_NAME="$OPTARG";;
+    m) # Memory to allocate to the VM
+      RUNNER_MEMORY="$OPTARG";;
+    M) # Mount local host directories into the VM <host dir>:<vm root dir>
+      if [ -z "$RUNNER_MOUNT" ]; then
+        RUNNER_MOUNT="$OPTARG"
+      else
+        RUNNER_MOUNT="$(printf %s\\n%s\\n "$RUNNER_MOUNT" "$OPTARG")"
+      fi;;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
     r) # Number of times to repeat the runner loop
@@ -139,48 +171,86 @@ shift $((OPTIND-1))
 # Pass logging configuration and level to imported scripts
 KRUNVM_RUNNER_LOG=$RUNNER_LOG
 KRUNVM_RUNNER_VERBOSE=$RUNNER_VERBOSE
-loop=${1:-}
+loop=${1:-"0"}
 if [ -n "${loop:-}" ]; then
   KRUNVM_RUNNER_BIN=$(basename "$0")
   KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$loop"
 fi
 
+# Name of the root directory in the VM where to map environment and
+# synchronisation files.
+RUNNER_VM_ENVDIR="_environment"
+
+if [ -z "$RUNNER_PAT" ]; then
+  error "You need to specify a PAT to acquire the runner token with"
+fi
+check_positive_number "$RUNNER_CPUS" "Number of vCPUs"
+check_positive_number "$RUNNER_MEMORY" "Memory (in MB)"
+
 # Decide which runner.sh implementation (this is the "entrypoint" of the
 # microVM) to use: the one from the mount point, or the built-in one.
 if [ -z "$RUNNER_DIR" ]; then
-  runner=/opt/gh-runner-krunvm/bin/runner.sh
+  RUNNER_ENTRYPOINT=/opt/gh-runner-krunvm/bin/runner.sh
 else
   check_command "${RUNNER_ROOTDIR}/runner/runner.sh"
-  runner=${RUNNER_DIR%/}/runner/runner.sh
+  RUNNER_ENTRYPOINT=${RUNNER_DIR%/}/runner/runner.sh
 fi
 
-iteration=0
-while true; do
-  id=$(random_string)
-  RUNNER_ID=${loop}-${id}
-  verbose "Starting microVM $RUNNER_NAME to run ephemeral GitHub runner $RUNNER_ID"
+# Create the VM used for orchestration. Add --volume options for all necessary
+# mappings, i.e. inheritance of "live" code, environment isolation and all
+# requested mount points.
+vm_create() {
+  verbose "Creating microVM '${RUNNER_PREFIX}-$1', $RUNNER_CPUS vCPUs, ${RUNNER_MEMORY}M memory"
+  # Note: reset arguments!
+  set -- \
+    --cpus "$RUNNER_CPUS" \
+    --mem "$RUNNER_MEMORY" \
+    --dns "$RUNNER_DNS" \
+    --name "${RUNNER_PREFIX}-$1"
+  if [ -n "${RUNNER_DIR:-}" ]; then
+    set -- "$@" --volume "${RUNNER_ROOTDIR}:${RUNNER_DIR}"
+  fi
+  if [ -n "${RUNNER_ENVIRONMENT:-}" ]; then
+    set -- "$@" --volume "${RUNNER_ENVIRONMENT}:/${RUNNER_VM_ENVDIR}"
+  fi
+  if [ -n "$RUNNER_MOUNT" ]; then
+    while IFS= read -r mount || [ -n "$mount" ]; do
+      if [ -n "$mount" ]; then
+        set -- "$@" --volume "$mount"
+      fi
+    done <<EOF
+$(printf %s\\n "$RUNNER_MOUNT")
+EOF
+  fi
+  run_krunvm create "$RUNNER_IMAGE" "$@"
+
+}
+
+
+vm_start() {
+  _id=$1
   if [ -n "$RUNNER_ENVIRONMENT" ]; then
     # Create an env file with most of the RUNNER_ variables. This works because
     # the `runner.sh` script that will be called uses the same set of variables.
-    verbose "Creating isolation environment ${RUNNER_ENVIRONMENT}/${RUNNER_ID}.env"
+    verbose "Creating isolation environment ${RUNNER_ENVIRONMENT}/${_id}.env"
     while IFS= read -r varset; do
       # shellcheck disable=SC2163 # We want to expand the variable
-      printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.env"
+      printf '%s\n' "$varset" >> "${RUNNER_ENVIRONMENT}/${_id}.env"
     done <<EOF
-$(set | grep '^RUNNER_' | grep -vE '(ROOTDIR|ENVIRONMENT|NAME|MOUNT)')
+$(set | grep '^RUNNER_' | grep -vE '(ROOTDIR|ENVIRONMENT|IMAGE|MEMORY|CPUS|DNS|MOUNT|DIR|PREFIX)')
 EOF
 
     # Pass the location of the env. file to the runner script
-    set -- -E "/_environment/${RUNNER_ID}.env"
+    set -- -E "/${RUNNER_VM_ENVDIR}/${_id}.env"
 
     # Also pass the location of a file that will contain the token.
-    set -- -k "/_environment/${RUNNER_ID}.tkn" "$@"
+    set -- -k "/${RUNNER_VM_ENVDIR}/${_id}.tkn" "$@"
   else
     set -- \
         -e \
         -g "$RUNNER_GITHUB" \
         -G "$RUNNER_GROUP" \
-        -i "$RUNNER_ID" \
+        -i "$_id" \
         -l "$RUNNER_LOG" \
         -L "$RUNNER_LABELS" \
         -p "$RUNNER_PRINCIPAL" \
@@ -192,7 +262,29 @@ EOF
       set -- -v "$@"
     done
   fi
-  run_krunvm start "$RUNNER_NAME" "$runner" -- "$@"
+  verbose "Starting microVM '${RUNNER_PREFIX}-$_id' with entrypoint $RUNNER_ENTRYPOINT"
+  run_krunvm start "${RUNNER_PREFIX}-$_id" "$RUNNER_ENTRYPOINT" -- "$@"
+}
+
+
+vm_delete() {
+  # This is just a safety measure, the runner script should already have deleted
+  # the environment
+  if [ -n "$RUNNER_ENVIRONMENT" ] && [ -f "${RUNNER_ENVIRONMENT}/${1}.env" ]; then
+    warning "Removing isolation environment ${RUNNER_ENVIRONMENT}/${1}.env"
+    rm -f "${RUNNER_ENVIRONMENT}/${1}.env"
+  fi
+  verbose "Removing microVM '${RUNNER_PREFIX}-$1'"
+  run_krunvm delete "${RUNNER_PREFIX}-$1"
+}
+
+
+iteration=0
+while true; do
+  RUNNER_ID="${loop}-$(random_string)"
+  vm_create "${RUNNER_ID}"
+  vm_start "${RUNNER_ID}"
+  vm_delete "${RUNNER_ID}"
 
   if [ "$RUNNER_REPEAT" -gt 0 ]; then
     iteration=$((iteration+1))

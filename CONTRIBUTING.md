@@ -2,6 +2,11 @@
 
 This document contains notes about the internals of the implementation.
 
+> [!TIP]
+> The [orchestrator](./orchestrator.sh) takes few options. Run it with a `--`,
+> all options after that separator will be blindly passed to the
+> [runner](./runner.sh), which is the script with most user-facing options.
+
 ## Signalling Between Processes
 
 When environment isolation is turned on, i.e. when the variable
@@ -33,3 +38,21 @@ automatically removed as soon as the microVM has booted is running the
 `runner.sh` script, workflows are not able to break the external loop: they are
 able to create files in the `/_environment` directory, but they cannot know the
 value of the secret to put into the file to force the exiting handshake.
+
+## Changes to the Installation Scripts
+
+The installation of both images is handled by the [`base.sh`](./base/base.sh)
+and [`install.sh`](./runner/install.sh). When making changes to these scripts,
+or to the [`docker.sh`](./base/docker.sh) docker CLI wrapper, you will need to
+wait for the results of the [`dev.yml`](./.github/workflows/dev.yml) workflow to
+finish and for the resulting image to be published at the GHCR before being able
+to test. The images will be published for amd64 only and with a tag named after
+the name of the branch. Check out the "Inspect image" step of the `merge` job to
+collect the fully-qualified name of the image. Once done, provide that name to
+the `-i` option of the [`runner.sh`](./runner.sh) script.
+
+Note that when changing the logic of the "entrypoints", i.e. the scripts run at
+microVM initialisation, you do not need to wait for the image to be created.
+Instead, pass `-D /local` to the [`runner.sh`](./runner.sh) script. This will
+mount the [`runner`](./runner/) directory into the microVM at `/local` and run
+the scripts that it contains from there instead.

@@ -33,7 +33,7 @@ is_true() {
 
 # shellcheck disable=SC2120 # Function has good default.
 random_string() {
-  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-12}"
+  LC_ALL=C tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "${1:-7}"
 }
 
 usage() {
@@ -102,6 +102,27 @@ wait_path() {
     sleep "$_interval"
     debug "Waiting for $2"
   done
+}
+
+check_number() {
+  if ! printf %d\\n "$1" >/dev/null 2>&1; then
+    if [ -n "${2:-}" ]; then
+      error "$2 is an invalid number: $1"
+    else
+      error "Invalid number: $1"
+    fi
+  fi
+}
+
+check_positive_number() {
+  check_number "$1" "$2"
+  if [ "$1" -le 0 ]; then
+    if [ -n "${2:-}" ]; then
+      error "$2 must be a positive number: $1"
+    else
+      error "Invalid positive number: $1"
+    fi
+  fi
 }
 
 
