@@ -2,6 +2,11 @@
 
 This document contains notes about the internals of the implementation.
 
+> [!TIP]
+> The [orchestrator](./orchestrator.sh) takes few options. Run it with a `--`,
+> all options after that separator will be blindly passed to the
+> [runner](./runner.sh), which is the script with most user-facing options.
+
 ## Signalling Between Processes
 
 When environment isolation is turned on, i.e. when the variable
@@ -44,10 +49,10 @@ finish and for the resulting image to be published at the GHCR before being able
 to test. The images will be published for amd64 only and with a tag named after
 the name of the branch. Check out the "Inspect image" step of the `merge` job to
 collect the fully-qualified name of the image. Once done, provide that name to
-the `-i` option of the [`orchestrator.sh`](./orchestrator.sh) script.
+the `-i` option of the [`runner.sh`](./runner.sh) script.
 
 Note that when changing the logic of the "entrypoints", i.e. the scripts run at
 microVM initialisation, you do not need to wait for the image to be created.
-Instead, pass `-D /local` to the [`orchestrator.sh`](./orchestrator.sh) script.
-This will mount the [`runner`](./runner/) directory into the microVM at `/local`
-and run the scripts that it contains from there instead.
+Instead, pass `-D /local` to the [`runner.sh`](./runner.sh) script. This will
+mount the [`runner`](./runner/) directory into the microVM at `/local` and run
+the scripts that it contains from there instead.

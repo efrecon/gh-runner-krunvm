@@ -17,36 +17,35 @@ multi-platform OCI [images][image] created for this project.
 ## Example
 
 Provided you are at the root directory of this project, the following would
-create two runner loops that are bound to *this* repository (the
-`efrecon/gh-runner-krunvm` principal). Runners can also be registered at the
-`organization` or `enterprise` scope using the `-s` option. In the example
+create two runner loops (the `-n` option) that are bound to *this* repository
+(the `efrecon/gh-runner-krunvm` principal). Runners can also be registered at
+the `organization` or `enterprise` scope using the `-s` option. In the example
 below, the value of the `-T` option should be a [PAT]. In each loop, as soon as
 one job has been picked up and executed, a new pristine runner will be created
 and registered.
 
-
 ```bash
-./orchestrator.sh -v -T ghp_XXXX -p efrecon/gh-runner-krunvm -- 2
+./orchestrator.sh -v -n 2 -- -T ghp_XXXX -p efrecon/gh-runner-krunvm
 ```
 
-The project tries to have good default options and behaviour -- run with `-h`
-for a list of options. For example, nor the value of the token, nor the value of
-the runner registration token will be visible to the workflows using your
-runners. The default is however to create far-less capable runners than the
-GitHub [runners], i.e. 1G or memory and 2 vCPUs. By default, runners have random
-names and carry labels with the name of the base repository, e.g. `fedora` and
-`krunvm`. The GitHub runner implementation will automatically add other labels
-in addition to those.
+The project tries to have good default options and behaviour. For example, nor
+the value of the token, nor the value of the runner registration token will be
+visible to the workflows using your runners. The default is however to create
+far-less capable runners than the GitHub [runners], i.e. 1G or memory and 2
+vCPUs. By default, runners have random names and carry labels with the name of
+the base repository, e.g. `fedora` and `krunvm`. The GitHub runner
+implementation will automatically add other labels in addition to those.
 
 All scripts within the project accepts short options only and can either be
 controlled through options or environment variables. Running with the `-h`
-option will provide help and a list of those variables. Variables starting with
-`ORCHESTRATOR_` will affect the behaviour of the
+option will provide help and a list of those variables. From the command-line,
+you will only be running one script: the [orchestrator](./orchestrator.sh).
+However, runner loops are created using the [runner](./runner.sh) script, by the
+orchestrator. At the orchestrator CLI, options that appear after the `--` will
+be blindly passed to the runner loop and script. Environment variables starting
+with `ORCHESTRATOR_` will affect the behaviour of the
 [orchestrator](./orchestrator.sh), while variables starting with `RUNNER_` will
-affect the behaviour of each runner. Usually, the only script that you will have
-to use is the [orchestrator](./orchestrator.sh). However, it is possible to
-create the microVM with the orchestrator and manually run loops using the
-[runner](./runner.sh) script.
+affect the behaviour of each runner (loop).
 
   [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 
@@ -75,7 +74,7 @@ create the microVM with the orchestrator and manually run loops using the
 ## Requirements
 
 This project is coded in pure POSIX shell and has only been tested on Linux. The
-images are automatically [built] both for x86_64 and AArch64. However, [krunvm]
+images are automatically [built] both for amd64 and arm64. However, [krunvm]
 also runs on MacOS. No "esoteric" options have been used when using the standard
 UNIX binary utilities. PRs are welcome to make the project work on MacOS, if it
 does not already.
@@ -106,12 +105,13 @@ installed on the host. Installation is easiest on Fedora
 
 ## Architecture and Design
 
-The [orchestrator](./orchestrator.sh) focuses on creating (but not starting) a
-microVM based on the default OCI image (see below). It then creates as many
-loops of ephemeral runners as requested. These loops are implemented as part of
-the [runner.sh](./runner.sh) script: the script will start a microVM that will
-start an (ephemeral) [runner][self]. As soon as a job has been executed on that
-runner, the microVM will end and a new will be created.
+The [orchestrator](./orchestrator.sh) creates as many loops of ephemeral runners
+as requested. These loops are implemented as part of the
+[runner.sh](./runner.sh) script: the script will create a microVM based on the
+default image (see below), memory and vCPU requirement. It will then start that
+microVM using `krunvm` and that will start an (ephemeral) [runner][self]. As
+soon as a job has been executed on that runner, the microVM will end and a new
+will be created.
 
 The OCI image is built in two parts:
 
@@ -142,6 +142,12 @@ runner and then start the actions runner .NET implementation, under the `runner`
 user. The `runner` user shares the same id as the one at GitHub and is also a
 member of the `docker` group. Similarily to GitHub runners, the user is capable
 of `sudo` without a password.
+
+Runner tokens are written to the directory that is shared with the host. This is
+used during initial synchronisation, to avoid starting up several runners at the
+same time from the main orchestrator loop. The tokens are automatically removed
+as soon as the runner is up, they are also protected so that the `runner` user
+cannot read their content.
 
 ## History
 
