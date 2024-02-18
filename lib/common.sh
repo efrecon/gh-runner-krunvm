@@ -104,6 +104,27 @@ wait_path() {
   done
 }
 
+check_number() {
+  if ! printf %d\\n "$1" >/dev/null 2>&1; then
+    if [ -n "${2:-}" ]; then
+      error "$2 is an invalid number: $1"
+    else
+      error "Invalid number: $1"
+    fi
+  fi
+}
+
+check_positive_number() {
+  check_number "$1" "$2"
+  if [ "$1" -le 0 ]; then
+    if [ -n "${2:-}" ]; then
+      error "$2 must be a positive number: $1"
+    else
+      error "Invalid positive number: $1"
+    fi
+  fi
+}
+
 
 # PML: Poor Man's Logging
 _log() {
