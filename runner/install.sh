@@ -108,6 +108,7 @@ mkdir -p "${INSTALL_DIR}/runner-${INSTALL_VERSION}"
 curl -sSL "https://github.com/${INSTALL_PROJECT}/releases/download/v${INSTALL_VERSION}/actions-runner-linux-${INSTALL_ARCH}-${INSTALL_VERSION}.tar.gz" > "${INSTALL_DIR}/${INSTALL_VERSION}.tgz"
 verbose "Installing runner to $INSTALL_DIR"
 tar -C "${INSTALL_DIR}/runner-${INSTALL_VERSION}" -zxf "${INSTALL_DIR}/${INSTALL_VERSION}.tgz"
+rm -f "${INSTALL_DIR}/${INSTALL_VERSION}.tgz"
 
 # Install the dependencies (this is distro specific and aware)
 "${INSTALL_DIR}/runner-${INSTALL_VERSION}/bin/installdependencies.sh"

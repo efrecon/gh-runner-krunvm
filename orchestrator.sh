@@ -39,32 +39,12 @@ ORCHESTRATOR_VERBOSE=${ORCHESTRATOR_VERBOSE:-0}
 # Where to send logs
 ORCHESTRATOR_LOG=${ORCHESTRATOR_LOG:-2}
 
-# Name of the OCI image (fully-qualified) to use. You need to have access.
-ORCHESTRATOR_IMAGE=${ORCHESTRATOR_IMAGE:-"ghcr.io/efrecon/runner-krunvm:main"}
+# Number of runners to create
+ORCHESTRATOR_RUNNERS=${ORCHESTRATOR_RUNNERS:-1}
 
-# Memory to allocate to the VM (in MB). Regular runners use more than the
-# default.
-ORCHESTRATOR_MEMORY=${ORCHESTRATOR_MEMORY:-"1024"}
-
-# Number of vCPUs to allocate to the VM. Regular runners use more than the
-# default.
-ORCHESTRATOR_CPUS=${ORCHESTRATOR_CPUS:-"2"}
-
-# Name of the VM to create (krunvm create)
-ORCHESTRATOR_NAME=${ORCHESTRATOR_NAME:-"runner"}
-
-# DNS to use on the VM. This is the same as the default in krunvm.
-ORCHESTRATOR_DNS=${ORCHESTRATOR_DNS:-"1.1.1.1"}
-
-# Host->VM mount points, lines containing pairs of directory mappings separated
-# by a colon.
-ORCHESTRATOR_MOUNT=${ORCHESTRATOR_MOUNT:-""}
-
-# Name of top directory in VM where to host a copy of the root directory of this
-# script. When this is set, the runner starter script from that directory will
-# be used -- instead of the one already in the OCI image. This option is mainly
-# usefull for development and testing.
-ORCHESTRATOR_DIR=${ORCHESTRATOR_DIR:-""}
+# Prefix to use for the VM name. The VM name will be $ORCHESTRATOR_PREFIX-xxx.
+# All VMs prefixed with this name will be deleted on exit.
+ORCHESTRATOR_PREFIX=${ORCHESTRATOR_PREFIX:-"GH-runner"}
 
 # Should the runner be isolated in its own environment. This will pass all
 # configuration down to the runner starter script as an environment variable to
@@ -72,90 +52,31 @@ ORCHESTRATOR_DIR=${ORCHESTRATOR_DIR:-""}
 # used.
 ORCHESTRATOR_ISOLATION=${ORCHESTRATOR_ISOLATION:-"1"}
 
-# Number of seconds to sleep between microVM creation at start
+# Number of seconds to sleep between microVM creation at start, unless isolation
+# has been turned on.
 ORCHESTRATOR_SLEEP=${ORCHESTRATOR_SLEEP:-"30"}
-
-# GitHub host, e.g. github.com or github.example.com
-RUNNER_GITHUB=${RUNNER_GITHUB:-"github.com"}
-
-# Group to attach the runner to
-RUNNER_GROUP=${RUNNER_GROUP:-"Default"}
-
-# Comma separated list of labels to attach to the runner (good defaults will be used if empty)
-RUNNER_LABELS=${RUNNER_LABELS:-""}
-
-# Name of the user to run the runner as, defaults to runner. User must exist.
-RUNNER_USER=${RUNNER_USER:-"runner"}
-
-# Scope of the runner, one of: repo, org or enterprise
-RUNNER_SCOPE=${RUNNER_SCOPE:-"repo"}
-
-# Name of organisation, enterprise or repo to attach the runner to, when
-# relevant scope.
-RUNNER_PRINCIPAL=${RUNNER_PRINCIPAL:-""}
-
-# PAT to acquire runner token with
-RUNNER_PAT=${RUNNER_PAT:-""}
-
-# Should the runner auto-update
-RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
-
-# Number of times to repeat the runner loop
-RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
 
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
 
 
-while getopts "a:c:d:D:g:G:i:Il:L:m:M:n:p:r:s:t:T:u:Uvh-" opt; do
+while getopts "s:Il:n:p:vh-" opt; do
   case "$opt" in
-    a) # Number of seconds to sleep between microVM creation at start, when no isolation
+    s) # Number of seconds to sleep between microVM creation at start, when no isolation
       ORCHESTRATOR_SLEEP="$OPTARG";;
-    c) # Number of CPUs to allocate to the VM
-      ORCHESTRATOR_CPUS="$OPTARG";;
-    d) # DNS server to use in VM
-      ORCHESTRATOR_DNS=$OPTARG;;
-    D) # Local top VM directory where to host a copy of the root directory of this script (for dev and testing).
-      ORCHESTRATOR_DIR=$OPTARG;;
-    g) # GitHub host, e.g. github.com or github.example.com
-      RUNNER_GITHUB="$OPTARG";;
-    G) # Group to attach the runners to
-      RUNNER_GROUP="$OPTARG";;
-    i) # Fully-qualified name of the OCI image to use
-      ORCHESTRATOR_IMAGE="$OPTARG";;
     I) # Turn off variables isolation (not recommended, security risk)
       ORCHESTRATOR_ISOLATION=0;;
     l) # Where to send logs
       ORCHESTRATOR_LOG="$OPTARG";;
-    L) # Comma separated list of labels to attach to the runner
-      RUNNER_LABELS="$OPTARG";;
-    m) # Memory to allocate to the VM
-      ORCHESTRATOR_MEMORY="$OPTARG";;
-    M) # Mount local host directories into the VM <host dir>:<vm root dir>
-      if [ -z "$ORCHESTRATOR_MOUNT" ]; then
-        ORCHESTRATOR_MOUNT="$OPTARG"
-      else
-        ORCHESTRATOR_MOUNT="$(printf %s\\n%s\\n "$ORCHESTRATOR_MOUNT" "$OPTARG")"
-      fi;;
-    n) # Name of the VM to create
-      ORCHESTRATOR_NAME="$OPTARG";;
-    p) # Principal to authorise the runner for, name of repo, org or enterprise
-      RUNNER_PRINCIPAL="$OPTARG";;
-    r) # Number of times to repeat the runner loop
-      RUNNER_REPEAT="$OPTARG";;
-    s) # Scope of the runner, one of repo, org or enterprise
-      RUNNER_SCOPE="$OPTARG";;
-    T) # Authorization token at the GitHub API to acquire runner token with
-      RUNNER_PAT="$OPTARG";;
-    u) # User to run the runner as
-      RUNNER_USER="$OPTARG";;
-    U) # Turn on auto-updating of the runner
-      RUNNER_UPDATE=1;;
+    n) # Number of runners to create
+      ORCHESTRATOR_RUNNERS="$OPTARG";;
+    p) # Prefix to use for the VM name
+      ORCHESTRATOR_PREFIX="$OPTARG";;
     v) # Increase verbosity, will otherwise log on errors/warnings only
       ORCHESTRATOR_VERBOSE=$((ORCHESTRATOR_VERBOSE+1));;
     h) # Print help and exit
       usage 0 "(ORCHESTRATOR|RUNNER)";;
-    -) # End of options. Single argument: number of runners to create
+    -) # End of options. All subsequent arguments are passed to the runner.sh script
       break;;
     ?)
       usage 1;;
@@ -169,6 +90,16 @@ KRUNVM_RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 
 cleanup() {
   trap - INT TERM EXIT
+
+  if run_krunvm list | grep -qE "^${ORCHESTRATOR_PREFIX}-"; then
+    while IFS= read -r vm; do
+      verbose "Removing microVM $vm"
+      run_krunvm delete "$vm"
+    done <<EOF
+$(run_krunvm list | grep -E "^${ORCHESTRATOR_PREFIX}-")
+EOF
+  fi
+
   if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
     verbose "Removing isolation environment $ORCHESTRATOR_ENVIRONMENT"
     rm -rf "$ORCHESTRATOR_ENVIRONMENT"
@@ -178,103 +109,57 @@ cleanup() {
 check_command buildah
 check_command krunvm
 
-# Remove existing VM with same name.
-if run_krunvm list | grep -qE "^$ORCHESTRATOR_NAME"; then
-  warn "$ORCHESTRATOR_NAME already exists, recreating"
-  run_krunvm delete "$ORCHESTRATOR_NAME"
-fi
-
-# Remember number of runners
-runners=${1:-0}
+check_positive_number "$ORCHESTRATOR_RUNNERS" "Number of runners"
 
 # Create isolation mount point
 if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
   ORCHESTRATOR_ENVIRONMENT=$(mktemp -d)
-  trap cleanup INT TERM EXIT
+  verbose "Creating $ORCHESTRATOR_RUNNERS isolated runner loops (using: $ORCHESTRATOR_ENVIRONMENT)"
+else
+  verbose "Creating $ORCHESTRATOR_RUNNERS insecure runner loops"
 fi
+trap cleanup INT TERM EXIT
 
-# Create the VM used for orchestration. Add --volume options for all necessary
-# mappings, i.e. inheritance of "live" code, environment isolation and all
-# requested mount points.
-verbose "Creating $runners microVM(s) '$ORCHESTRATOR_NAME', $ORCHESTRATOR_CPUS vCPUs, ${ORCHESTRATOR_MEMORY}M memory"
-# Note: reset arguments!
-set -- \
-  --cpus "$ORCHESTRATOR_CPUS" \
-  --mem "$ORCHESTRATOR_MEMORY" \
-  --dns "$ORCHESTRATOR_DNS" \
-  --name "$ORCHESTRATOR_NAME"
-if [ -n "${ORCHESTRATOR_DIR:-}" ]; then
-  set -- "$@" --volume "${ORCHESTRATOR_ROOTDIR}:${ORCHESTRATOR_DIR}"
-fi
-if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
-  set -- "$@" --volume "${ORCHESTRATOR_ENVIRONMENT}:/_environment"
-fi
-if [ -n "$ORCHESTRATOR_MOUNT" ]; then
-  while IFS= read -r mount || [ -n "$mount" ]; do
-    if [ -n "$mount" ]; then
-      set -- "$@" --volume "$mount"
-    fi
-  done <<EOF
-$(printf %s\\n "$ORCHESTRATOR_MOUNT")
-EOF
-fi
-run_krunvm create "$ORCHESTRATOR_IMAGE" "$@"
+# Pass essential variables, verbosity and log configuration to main runner
+# script.
+RUNNER_PREFIX=$ORCHESTRATOR_PREFIX
+RUNNER_ENVIRONMENT="${ORCHESTRATOR_ENVIRONMENT:-}"
+RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
+RUNNER_LOG=$ORCHESTRATOR_LOG
+export RUNNER_PREFIX RUNNER_ENVIRONMENT RUNNER_VERBOSE RUNNER_LOG
 
-if [ "$runners" -gt 0 ]; then
-  if [ -z "$RUNNER_PAT" ]; then
-    error "You need to specify a PAT to acquire the runner token with"
+# Create runner loops in the background. One per runner. Each loop will
+# indefinitely create ephemeral runners. Looping is implemented in runner.sh,
+# in the same directory as this script.
+for i in $(seq 1 "$ORCHESTRATOR_RUNNERS"); do
+  # Launch a runner loop in the background and collect its PID in the
+  # ORCHESTRATOR_PIDS variable.
+  verbose "Creating runner loop $i"
+  "$ORCHESTRATOR_ROOTDIR/runner.sh" "$@" -- "$i" &
+  if [ "$i" = "1" ]; then
+    ORCHESTRATOR_PIDS="$!"
+  else
+    ORCHESTRATOR_PIDS="$ORCHESTRATOR_PIDS $!"
   fi
 
-  # Export all RUNNER_ variables. This works because the 'runner.sh' script that
-  # will create VM in loops uses variables prefixed with RUNNER_.
-  while IFS= read -r varname; do
-    # shellcheck disable=SC2163 # We want to expand the variable
-    export "$varname"
-  done <<EOF
-$(set | grep '^RUNNER_' | sed 's/=.*//')
-EOF
-
-  # Pass verbosity and log configuration also
-  RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
-  RUNNER_LOG=$ORCHESTRATOR_LOG
-  export RUNNER_VERBOSE RUNNER_LOG
-
-  # Create runner loops in the background. One per runner. Each loop will
-  # indefinitely create ephemeral runners. Looping is implemented in runner.sh,
-  # in the same directory as this script.
-  set --; # Reset arguments
-  for i in $(seq 1 "$runners"); do
-    if [ -n "${RUNNER_PAT:-}" ]; then
-      verbose "Creating runner loop $i"
-      "$ORCHESTRATOR_ROOTDIR/runner.sh" \
-        -n "$ORCHESTRATOR_NAME" \
-        -D "$ORCHESTRATOR_DIR" \
-        -E "${ORCHESTRATOR_ENVIRONMENT:-}" \
-        -- "$i" &
-      set -- "$@" "$!"
-
-      # Wait for runner to be ready or have progresses somewhat before starting
-      # the next one.
-      if [ "$i" -lt "$runners" ]; then
-        # Wait for the runner token to be ready before starting the next runner,
-        # or sleep for some time.
-        if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
-          wait_path -f "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn" -1 5
-          token=$(find_pattern "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn")
-          rm -f "$token"
-          verbose "Removed token file $token"
-        elif [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
-          debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
-          sleep "$ORCHESTRATOR_SLEEP"
-        fi
-      fi
+  # Wait for runner to be ready or have progressed somewhat before starting
+  # the next one.
+  if [ "$i" -lt "$ORCHESTRATOR_RUNNERS" ]; then
+    # Wait for the runner token to be ready before starting the next runner,
+    # or, at least, sleep for some time.
+    if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
+      wait_path -f "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn" -1 5
+      token=$(find_pattern "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn")
+      rm -f "$token"
+      verbose "Removed token file $token"
+    elif [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then
+      debug "Sleeping for $ORCHESTRATOR_SLEEP seconds"
+      sleep "$ORCHESTRATOR_SLEEP"
     fi
-  done
+  fi
+done
 
-  verbose "Waiting for runners to die"
-  for pid in "$@"; do
-    wait "$pid"
-  done
-else
-  verbose "No runners to create. You can manually create runners with the $ORCHESTRATOR_ROOTDIR/runner.sh script"
-fi
+verbose "Waiting for runners to die"
+for pid in $ORCHESTRATOR_PIDS; do
+  wait "$pid"
+done

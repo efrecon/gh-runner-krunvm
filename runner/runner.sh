@@ -79,9 +79,6 @@ RUNNER_EPHEMERAL=${RUNNER_EPHEMERAL:-"0"}
 # Root installation of the runner
 RUNNER_INSTALL=${RUNNER_INSTALL:-"/opt/gh-runner-krunvm/share/runner"}
 
-# Permit several installations
-RUNNER_MULTI=${RUNNER_MULTI:-"1"}
-
 # Should the runner auto-update
 RUNNER_UPDATE=${RUNNER_UPDATE:-"0"}
 
@@ -156,23 +153,14 @@ KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 # minimal verification of the installation through checking that there is a
 # config.sh script executable within the copy.
 runner_install() {
-  if [ "$RUNNER_MULTI" = 1 ]; then
-    # Make a directory where to install a copy of the runner.
-    if ! [ -d "${RUNNER_WORKDIR%/}/runner" ]; then
-      mkdir -p "${RUNNER_WORKDIR%/}/runner"
-      verbose "Created runner directory ${RUNNER_WORKDIR%/}/runner"
-    fi
-    verbose "Installing runner in ${RUNNER_WORKDIR%/}/runner"
-    tar -C "${RUNNER_WORKDIR%/}/runner" -zxf "$RUNNER_TAR"
-  else
-    if ! [ -d "${RUNNER_WORKDIR%/}" ]; then
-      mkdir -p "${RUNNER_WORKDIR%/}"
-      verbose "Created runner directory ${RUNNER_WORKDIR%/}"
-    fi
-    verbose "Moving runner installation to ${RUNNER_WORKDIR%/}/runner"
-    mv -f "$RUNNER_INSTDIR" "${RUNNER_WORKDIR%/}/runner" 2>/dev/null
+  if ! [ -d "${RUNNER_WORKDIR%/}" ]; then
+    mkdir -p "${RUNNER_WORKDIR%/}"
+    verbose "Created runner directory ${RUNNER_WORKDIR%/}"
   fi
-  check_command "${RUNNER_WORKDIR%/}/runner/config.sh"
+  RUNNER_BINROOT="${RUNNER_WORKDIR%/}/runner"
+  verbose "Copying runner installation to $RUNNER_BINROOT"
+  cp -rf "$RUNNER_INSTDIR" "$RUNNER_BINROOT" 2>/dev/null
+  check_command "${RUNNER_BINROOT}/config.sh"
 }
 
 
@@ -284,7 +272,7 @@ runner_unregister() {
 # temporary changes directory before calling the script.
 runner_control() {
   cwd=$(pwd)
-  cd "${RUNNER_WORKDIR%/}/runner"
+  cd "$RUNNER_BINROOT"
   script=./${1}; shift
   check_command "$script"
   debug "Running $script $*"
@@ -369,8 +357,8 @@ fi
 debug "Setting up missing defaults"
 distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
-RUNNER_NAME_PREFIX=${RUNNER_NAME_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
-RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_NAME_PREFIX}-$RUNNER_ID"}
+RUNNER_PREFIX=${RUNNER_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
+RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_PREFIX}-$RUNNER_ID"}
 
 RUNNER_WORKDIR=${RUNNER_WORKDIR:-"/_work/${RUNNER_NAME}"}
 if [ -n "${distro:-}" ]; then
@@ -379,13 +367,13 @@ else
   RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
 fi
 
-RUNNER_TAR=$(find_pattern "${RUNNER_INSTALL}/*.tgz" f | sort -r | head -n 1)
-if [ -z "$RUNNER_TAR" ]; then
-  error "No runner tar file found under $RUNNER_INSTALL"
-fi
+# Find the (versioned) directory containing the full installation of the runner
+# binary distribution (unpacked by the installer)
 RUNNER_INSTDIR=$(find_pattern "${RUNNER_INSTALL}/runner-*" d | sort -r | head -n 1)
 if [ -z "$RUNNER_INSTDIR" ]; then
   error "No runner installation directory found under $RUNNER_INSTALL"
+else
+  debug "Found unpacked binary distribution at $RUNNER_INSTDIR"
 fi
 
 # Construct the runner URL, i.e. where the runner will be registered
