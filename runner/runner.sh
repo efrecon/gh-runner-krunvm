@@ -462,5 +462,6 @@ if [ -n "$RUNNER_PID" ]; then
         fi
       fi
     fi
+    sleep 1
   done
 fi
