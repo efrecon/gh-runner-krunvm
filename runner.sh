@@ -223,7 +223,6 @@ $(printf %s\\n "$RUNNER_MOUNT")
 EOF
   fi
   run_krunvm create "$RUNNER_IMAGE" "$@"
-
 }
 
 
@@ -263,7 +262,14 @@ EOF
     done
   fi
   verbose "Starting microVM '${RUNNER_PREFIX}-$_id' with entrypoint $RUNNER_ENTRYPOINT"
-  run_krunvm start "${RUNNER_PREFIX}-$_id" "$RUNNER_ENTRYPOINT" -- "$@"
+  optstate=$(set +o)
+  set -m; # Disable job control
+  run_krunvm start "${RUNNER_PREFIX}-$_id" "$RUNNER_ENTRYPOINT" -- "$@" </dev/null &
+  RUNNER_PID=$!
+  eval "$optstate"; # Restore options
+  verbose "Started microVM '${RUNNER_PREFIX}-$_id' with PID $RUNNER_PID"
+  wait "$RUNNER_PID"
+  RUNNER_PID=
 }
 
 
@@ -278,6 +284,34 @@ vm_delete() {
   run_krunvm delete "${RUNNER_PREFIX}-$1"
 }
 
+vm_terminate() {
+  if [ -n "$RUNNER_ENVIRONMENT" ] && [ -n "${RUNNER_SECRET:-}" ]; then
+    printf %s\\n "$RUNNER_SECRET" > "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
+    if [ "$RUNNER_PID" ]; then
+      # shellcheck disable=SC2046 # We want to wait for all children
+      waitpid $(ps_tree "$RUNNER_PID"|tac)
+    else
+      warning "No PID to wait for"
+    fi
+  elif [ -n "$RUNNER_PID" ]; then
+    kill_tree "$RUNNER_PID"
+    # shellcheck disable=SC2046 # We want to wait for all children
+    waitpid $(ps_tree "$RUNNER_PID"|tac)
+  fi
+}
+
+cleanup() {
+  trap '' EXIT
+  if [ -n "$RUNNER_PID" ]; then
+    vm_terminate
+  fi
+  if [ -n "$RUNNER_ID" ]; then
+    vm_delete "$RUNNER_ID"
+  fi
+}
+
+trap cleanup EXIT
+
 
 iteration=0
 while true; do
@@ -285,6 +319,7 @@ while true; do
   vm_create "${RUNNER_ID}"
   vm_start "${RUNNER_ID}"
   vm_delete "${RUNNER_ID}"
+  RUNNER_ID=
 
   if [ "$RUNNER_REPEAT" -gt 0 ]; then
     iteration=$((iteration+1))

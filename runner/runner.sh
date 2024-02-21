@@ -420,10 +420,12 @@ fi
 
 # Start the runner.
 verbose "Starting runner as user '$RUNNER_USER' (current user=$(id -un)): $*"
+RUNNER_PID=
 case "$RUNNER_USER" in
   root)
     if [ "$(id -u)" = "0" ]; then
-      "$@"
+      "$@" &
+      RUNNER_PID="$!"
     else
       error "Cannot start runner as root from non-root user"
     fi
@@ -433,7 +435,8 @@ case "$RUNNER_USER" in
       if [ "$(id -u)" = "0" ]; then
         verbose "Starting runner as $RUNNER_USER"
         chown -R "$RUNNER_USER" "$RUNNER_WORKDIR"
-        runas "$@"
+        runas "$@" &
+        RUNNER_PID="$!"
       elif [ "$(id -un)" = "$RUNNER_USER" ]; then
         "$@"
       else
@@ -444,3 +447,20 @@ case "$RUNNER_USER" in
     fi
     ;;
 esac
+
+if [ -n "$RUNNER_PID" ]; then
+  while [ -n "$(running "$RUNNER_PID")" ]; do
+    if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
+      if [ -f "${RUNNER_TOKENFILE%.*}.trm" ]; then
+        break=$(cat "${RUNNER_TOKENFILE%.*}.trm")
+        if [ "$break" = "$RUNNER_SECRET" ]; then
+          verbose "Termination file found, stopping runner"
+          kill "$RUNNER_PID"
+          runner_unregister 1
+        else
+          warning "Termination found at ${RUNNER_TOKENFILE%.*}.trm, but it does not match the secret"
+        fi
+      fi
+    fi
+  done
+fi

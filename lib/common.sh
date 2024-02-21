@@ -75,6 +75,57 @@ run_krunvm() {
   buildah unshare krunvm "$@"
 }
 
+tac() {
+  awk '{ buffer[NR] = $0; } END { for(i=NR; i>0; i--) { print buffer[i] } }'
+}
+
+# This is the same as pgrep -P, but using ps and awk. The option (and keywords)
+# used also exist on macOS, so this implementation should be cross platform.
+pgrep_P() {
+  ps -A -o pid,ppid | awk -v pid="$1" '$2 == pid { print $1 }'
+}
+
+ps_tree() {
+  if [ -n "$1" ]; then
+    printf %s\\n "$1"
+    for _pid in $(pgrep_P "$1"); do
+      ps_tree "$_pid"
+    done
+  fi
+}
+
+running() {
+  # Construct a comma separated list of pids to wait for
+  _pidlist=
+  for _pid; do
+    _pidlist="${_pidlist},${_pid}"
+  done
+
+  # Construct the list of those pids that are still running
+  ps -p "${_pidlist#,}" -o pid= 2>/dev/null | awk '{ print $1 }'
+}
+
+waitpid() {
+  # Construct the list of those pids that are still running
+  _running=$(running "$@")
+
+  # If not empty, sleep and try again with the list of running pids (so we avoid
+  # having the same PID that would reappear -- very unlikely)
+  if [ -n "$_running" ]; then
+    sleep 1
+    # shellcheck disable=SC2086 # We want to expand the list of pids
+    waitpid $_running
+  fi
+}
+
+kill_tree() {
+  verbose "Killing process tree for $1"
+  for pid in $(ps_tree "$1"|tac); do
+    debug "Killing process $pid"
+    kill -s "${2:-TERM}" -- "$pid"
+  done
+}
+
 
 find_pattern() {
   _type=$(to_lower "${2:-f}")
