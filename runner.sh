@@ -285,13 +285,24 @@ vm_delete() {
 }
 
 vm_terminate() {
-  if [ -n "$RUNNER_ENVIRONMENT" ] && [ -n "${RUNNER_SECRET:-}" ]; then
-    printf %s\\n "$RUNNER_SECRET" > "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
-    if [ "$RUNNER_PID" ]; then
+  if [ -n "$RUNNER_ENVIRONMENT" ]; then
+    if [ -f "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.tkn" ]; then
+      if [ -n "${RUNNER_SECRET:-}" ]; then
+        verbose "Requesting termination via ${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
+        printf %s\\n "$RUNNER_SECRET" > "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
+      elif [ -n "$RUNNER_PID" ]; then
+        kill_tree "$RUNNER_PID"
+      fi
+      if [ "$RUNNER_PID" ]; then
+        # shellcheck disable=SC2046 # We want to wait for all children
+        waitpid $(ps_tree "$RUNNER_PID"|tac)
+      else
+        warning "No PID to wait for"
+      fi
+    elif [ -n "$RUNNER_PID" ]; then
+      kill_tree "$RUNNER_PID"
       # shellcheck disable=SC2046 # We want to wait for all children
       waitpid $(ps_tree "$RUNNER_PID"|tac)
-    else
-      warning "No PID to wait for"
     fi
   elif [ -n "$RUNNER_PID" ]; then
     kill_tree "$RUNNER_PID"

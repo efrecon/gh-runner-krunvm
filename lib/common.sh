@@ -122,7 +122,7 @@ kill_tree() {
   verbose "Killing process tree for $1"
   for pid in $(ps_tree "$1"|tac); do
     debug "Killing process $pid"
-    kill -s "${2:-TERM}" -- "$pid"
+    kill -s "${2:-TERM}" -- "$pid" 2>/dev/null
   done
 }
 
