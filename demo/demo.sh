@@ -15,4 +15,4 @@ clear
 
 pe "# For the sake of the asciicast: PAT is present in RUNNER_PAT environment variable"
 pe "# -r 1: to run once only, the default is to run forever"
-pe "./orchestrator.sh -v -r 1 -p efrecon/gh-runner-krunvm -- 1"
+pe "./orchestrator.sh -v -- -r 1 -p efrecon/gh-runner-krunvm"

@@ -89,7 +89,15 @@ KRUNVM_RUNNER_LOG=$ORCHESTRATOR_LOG
 KRUNVM_RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 
 cleanup() {
-  trap - INT TERM EXIT
+  trap '' EXIT
+
+  for pid in $ORCHESTRATOR_PIDS; do
+    verbose "Killing runner loop $pid"
+    kill "$pid"
+  done
+  verbose "Waiting for runners to die"
+  # shellcheck disable=SC2086 # We want to wait for all pids
+  waitpid $ORCHESTRATOR_PIDS
 
   if run_krunvm list | grep -qE "^${ORCHESTRATOR_PREFIX}-"; then
     while IFS= read -r vm; do
@@ -118,7 +126,8 @@ if [ "$ORCHESTRATOR_ISOLATION" = 1 ]; then
 else
   verbose "Creating $ORCHESTRATOR_RUNNERS insecure runner loops"
 fi
-trap cleanup INT TERM EXIT
+
+trap cleanup EXIT
 
 # Pass essential variables, verbosity and log configuration to main runner
 # script.
@@ -159,7 +168,6 @@ for i in $(seq 1 "$ORCHESTRATOR_RUNNERS"); do
   fi
 done
 
-verbose "Waiting for runners to die"
-for pid in $ORCHESTRATOR_PIDS; do
-  wait "$pid"
-done
+# shellcheck disable=SC2086 # We want to wait for all pids
+waitpid $ORCHESTRATOR_PIDS
+cleanup
