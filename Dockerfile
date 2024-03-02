@@ -9,7 +9,7 @@ COPY runner/*.sh ${INSTALL_NAMESPACE}/bin/
 # Redundant, but this makes this image more standalone.
 COPY lib/*.sh ${INSTALL_NAMESPACE}/lib/
 RUN chmod a+x ${INSTALL_NAMESPACE}/bin/*.sh \
-    && "${INSTALL_NAMESPACE}/bin/install.sh" -v -l /dev/stdout
+    && "${INSTALL_NAMESPACE}/bin/install.sh" -v
 
 ENTRYPOINT ["${INSTALL_NAMESPACE}/bin/entrypoint.sh"]
 CMD ["./bin/Runner.Listener", "run", "--startuptype", "service"]

@@ -48,14 +48,10 @@ BASE_UID=${BASE_UID:-1001}
 BASE_GROUP=${BASE_GROUP:-runner}
 BASE_GID=${BASE_GID:-121}
 
-# Name of the "sudo" group - wheel on Fedora, sudo on Ubuntu
-BASE_SUDO=${BASE_SUDO:-"wheel"}
 
 BASE_DOCKER_WRAPPER=${BASE_DOCKER_WRAPPER:-$BASE_ROOTDIR/docker.sh}
 
-# shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Install a base GitHub runner environment in Fedora"
-
 while getopts "dl:vh-" opt; do
   case "$opt" in
     d) # Install docker
@@ -76,46 +72,114 @@ shift $((OPTIND-1))
 KRUNVM_RUNNER_LOG=$BASE_LOG
 KRUNVM_RUNNER_VERBOSE=$BASE_VERBOSE
 
-# TODO: locales?
-verbose "Installing base packages"
-dnf -y install \
-  lsb-release \
-  curl \
-  tar \
-  unzip \
-  zip \
-  sudo \
-  ca-certificates \
-  @development-tools \
-  git-lfs \
-  zlib-devel \
-  zstd \
-  gettext \
-  libcurl-devel \
-  iputils \
-  jq \
-  wget \
-  dirmngr \
-  openssh-clients \
-  python3-pip \
-  python3-setuptools \
-  python3-virtualenv \
-  python3 \
-  dumb-init \
-  procps \
-  nodejs \
-  rsync \
-  libpq-devel \
-  pkg-config \
-  podman \
-  buildah \
-  skopeo \
-  'dnf-command(config-manager)'
+BASE_DISTRO=$(get_env /etc/os-release ID | to_lower)
 
-if [ "$BASE_DOCKER" = "1" ]; then
+# Update the apt cache and install the packages passed as arguments. This is a
+# convenience function to avoid repeating those lines over and over and to
+# provide additional logging over those operations.
+apt_install() {
+  debug "Installing apt packages: $*"
+  apt-get update
+  apt-get install -y "$@"
+}
+
+# TODO: locales?
+install_base() {
+  verbose "Installing base packages"
+  case "$BASE_DISTRO" in
+    fedora)
+      dnf -y install \
+              lsb-release \
+              curl \
+              tar \
+              unzip \
+              zip \
+              sudo \
+              ca-certificates \
+              @development-tools \
+              git-lfs \
+              zlib-devel \
+              zstd \
+              gettext \
+              libcurl-devel \
+              iputils \
+              jq \
+              wget \
+              dirmngr \
+              openssh-clients \
+              python3-pip \
+              python3-setuptools \
+              python3-virtualenv \
+              python3 \
+              dumb-init \
+              procps \
+              nodejs \
+              rsync \
+              libpq-devel \
+              pkg-config \
+              podman \
+              buildah \
+              skopeo
+      ;;
+    ubuntu)
+      apt_install \
+              lsb-release \
+              curl \
+              tar \
+              unzip \
+              zip \
+              sudo \
+              ca-certificates \
+              build-essential \
+              git-lfs \
+              zlib1g-dev \
+              zstd \
+              gettext \
+              libcurl4-openssl-dev \
+              iputils-ping \
+              jq \
+              wget \
+              dirmngr \
+              openssh-client \
+              python3-pip \
+              python3-setuptools \
+              python3-venv \
+              python3 \
+              dumb-init \
+              procps \
+              nodejs \
+              rsync \
+              libpq-dev \
+              pkg-config \
+              podman \
+              buildah \
+              skopeo
+      ;;
+    *)
+      error "Unsupported distribution: $BASE_DISTRO";;
+  esac
+}
+
+install_docker() {
   verbose "Installing docker"
-  dnf -y config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
-  dnf -y install docker-ce-cli docker-buildx-plugin docker-compose-plugin
+  case "$BASE_DISTRO" in
+    fedora)
+      dnf install 'dnf-command(config-manager)'
+      dnf -y config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
+      dnf -y install docker-ce-cli docker-buildx-plugin docker-compose-plugin
+      ;;
+    ubuntu)
+      apt_install \
+              apt-transport-https \
+              gnupg-agent \
+              software-properties-common
+      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      apt_install docker-ce docker-ce-cli containerd.io
+      ;;
+    *)
+      error "Unsupported distribution: $BASE_DISTRO";;
+  esac
 
   # Replace the real docker binary with our wrapper so we will be able to force
   # running containers on the host network.
@@ -126,27 +190,68 @@ if [ "$BASE_DOCKER" = "1" ]; then
   mv -f "$docker" "${docker}.orig"
   verbose "Moved regular docker client to ${docker}.orig, installing wrapper from $BASE_DOCKER_WRAPPER instead"
   mv -f "$BASE_DOCKER_WRAPPER" "$docker"
-fi
+}
 
-verbose "Installing gh CLI"
-dnf -y config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
-dnf -y install gh
+install_gh() {
+  verbose "Installing GitHub CLI"
+  case "$BASE_DISTRO" in
+    fedora)
+      dnf -y install 'dnf-command(config-manager)'
+      dnf -y config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo
+      dnf -y install gh
+      ;;
+    ubuntu)
+      # shellcheck disable=SC2174
+      mkdir -p -m 755 /etc/apt/keyrings
+      wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
+      chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+      apt_install gh
+      ;;
+    *)
+      error "Unsupported distribution: $BASE_DISTRO";;
+  esac
+}
 
-verbose "Installing yq"
-wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-chmod a+x /usr/local/bin/yq
+install_yq() {
+  verbose "Installing yq"
+  wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+  chmod a+x /usr/local/bin/yq
+}
 
-verbose "Creating user (${BASE_USER}:${BASE_UID}) and group (${BASE_GROUP}:${BASE_GID})"
-groupadd --gid "$BASE_GID" "$BASE_GROUP"
-useradd \
-  --system \
-  --create-home \
-  --home-dir "/home/$BASE_USER" \
-  --uid "$BASE_UID" \
-  --gid "$BASE_GID" \
-  "$BASE_USER"
-usermod --append --groups "$BASE_SUDO" "$BASE_USER"
-if [ "$BASE_DOCKER" = "1" ]; then
-  usermod --append --groups docker "$BASE_USER"
-fi
-printf '%%%s ALL=(ALL) NOPASSWD: ALL\n' "$BASE_SUDO">> /etc/sudoers
+create_user() {
+  verbose "Creating user (${BASE_USER}:${BASE_UID}) and group (${BASE_GROUP}:${BASE_GID})"
+
+  # Name of the "sudo" group - wheel on Fedora, sudo on Ubuntu
+  case "$BASE_DISTRO" in
+    fedora)
+      BASE_SUDO=${BASE_SUDO:-"wheel"}
+      ;;
+    ubuntu)
+      BASE_SUDO=${BASE_SUDO:-"sudo"}
+      ;;
+    *)
+      error "Unsupported distribution: $BASE_DISTRO";;
+  esac
+
+  groupadd --gid "$BASE_GID" "$BASE_GROUP"
+  useradd \
+    --system \
+    --create-home \
+    --home-dir "/home/$BASE_USER" \
+    --uid "$BASE_UID" \
+    --gid "$BASE_GID" \
+    "$BASE_USER"
+  usermod --append --groups "$BASE_SUDO" "$BASE_USER"
+  if [ "$BASE_DOCKER" = "1" ]; then
+    usermod --append --groups docker "$BASE_USER"
+  fi
+  printf '%%%s ALL=(ALL) NOPASSWD: ALL\n' "$BASE_SUDO">> /etc/sudoers
+}
+
+install_base
+[ "$BASE_DOCKER" = "1" ] && install_docker
+install_gh
+install_yq
+
+create_user
