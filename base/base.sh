@@ -164,7 +164,7 @@ install_docker() {
   verbose "Installing docker"
   case "$BASE_DISTRO" in
     fedora)
-      dnf install 'dnf-command(config-manager)'
+      dnf -y install 'dnf-command(config-manager)'
       dnf -y config-manager --add-repo https://download.docker.com/linux/fedora/docker-ce.repo
       dnf -y install docker-ce-cli docker-buildx-plugin docker-compose-plugin
       ;;
