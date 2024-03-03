@@ -1,6 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG VERSION=main
-FROM ghcr.io/efrecon/runner-krunvm-base:${VERSION}
+ARG DISTRO=fedora
+FROM ghcr.io/efrecon/runner-krunvm-base-${DISTRO}:${VERSION}
 
 ARG INSTALL_VERSION=latest
 ARG INSTALL_NAMESPACE=/opt/gh-runner-krunvm

@@ -8,9 +8,12 @@ on:
 jobs:
   build-base:
     uses: ./.github/workflows/_build.yml
+    strategy:
+      matrix:
+        os: [ubuntu, fedora]
     with:
-      image: ${{ github.actor }}/runner-krunvm-base
-      file: Dockerfile.base
+      image: ${{ github.actor }}/runner-krunvm-base-${{ matrix.os }}
+      file: Dockerfile.base.${{ matrix.os }}
       platforms: linux/amd64
     secrets:
       username: ${{ github.actor }}
@@ -20,12 +23,16 @@ jobs:
     needs:
       - build-base
     uses: ./.github/workflows/_build.yml
+    strategy:
+      matrix:
+        os: [ubuntu, fedora]
     with:
-      image: ${{ github.actor }}/runner-krunvm
+      image: ${{ github.actor }}/runner-krunvm-${{ matrix.os }}
       file: Dockerfile
       platforms: linux/amd64
       build-args: |
         VERSION=${{ needs.build-base.outputs.version }}
+        DISTRO=${{ matrix.os }}
     secrets:
       username: ${{ github.actor }}
       password: ${{ secrets.GITHUB_TOKEN }}
