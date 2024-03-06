@@ -169,12 +169,10 @@ install_docker() {
       dnf -y install docker-ce-cli docker-buildx-plugin docker-compose-plugin
       ;;
     ubuntu)
-      apt_install \
-              apt-transport-https \
-              gnupg-agent \
-              software-properties-common
-      curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
-      add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+      install -m 755 -d /etc/apt/keyrings
+      wget -qO- https://download.docker.com/linux/ubuntu/gpg | tee /etc/apt/keyrings/docker.asc > /dev/null
+      chmod a+r /etc/apt/keyrings/docker.asc
+      echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | tee /etc/apt/sources.list.d/docker.list > /dev/null
       apt_install docker-ce docker-ce-cli containerd.io
       ;;
     *)
@@ -201,8 +199,7 @@ install_gh() {
       dnf -y install gh
       ;;
     ubuntu)
-      # shellcheck disable=SC2174
-      mkdir -p -m 755 /etc/apt/keyrings
+      install -m 755 -d /etc/apt/keyrings
       wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null
       chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
       echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null
