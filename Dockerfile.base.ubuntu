@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+ARG UBUNTU_VERSION=23.10
+FROM ubuntu:${UBUNTU_VERSION}
+
+ARG INSTALL_NAMESPACE=/opt/gh-runner-krunvm
+
+COPY base/*.sh ${INSTALL_NAMESPACE}/bin/
+COPY lib/*.sh ${INSTALL_NAMESPACE}/lib/
+RUN chmod a+x "${INSTALL_NAMESPACE}/bin/base.sh" \
+    && "${INSTALL_NAMESPACE}/bin/base.sh" -dv
+COPY base/root/ /

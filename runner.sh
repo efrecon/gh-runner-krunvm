@@ -40,7 +40,7 @@ RUNNER_VERBOSE=${RUNNER_VERBOSE:-0}
 RUNNER_LOG=${RUNNER_LOG:-2}
 
 # Name of the OCI image (fully-qualified) to use. You need to have access.
-RUNNER_IMAGE=${RUNNER_IMAGE:-"ghcr.io/efrecon/runner-krunvm:main"}
+RUNNER_IMAGE=${RUNNER_IMAGE:-"ghcr.io/efrecon/runner-krunvm-ubuntu:main"}
 
 # Memory to allocate to the VM (in MB). Regular runners use more than the
 # default.
