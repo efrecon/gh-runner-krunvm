@@ -5,14 +5,16 @@ This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
 [runners] inside your infrastruture, as opposed to [solutions] based on
 Kubernetes or Docker containers. MicroVMs boot fast, providing an experience
 close to running containers. [krunvm] creates and starts VMs based on the
-multi-platform OCI [images][image] created for this project.
+multi-platform OCI images created for this project -- [ubuntu] (default) or
+[fedora].
 
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
   [krunvm]: https://github.com/containers/krunvm
   [microVM]: https://github.com/infracloudio/awesome-microvm
   [solutions]: https://github.com/jonico/awesome-runners
-  [image]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm
+  [ubuntu]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-ubuntu
+  [fedora]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-fedora
 
 ## Example
 
@@ -33,7 +35,7 @@ the value of the token, nor the value of the runner registration token will be
 visible to the workflows using your runners. The default is to create far-less
 capable runners than the GitHub [runners], i.e. 1G or memory and 2 vCPUs. Unless
 otherwise specified, runners have random names and carry labels with the name of
-the base repository, e.g. `fedora` and `krunvm`. The GitHub runner
+the base repository, e.g. `ubuntu` and `krunvm`. The GitHub runner
 implementation will automatically add other labels in addition to those.
 
 In the example above, the double-dash `--` separates options given to the
@@ -95,8 +97,6 @@ installed on the host. Installation is easiest on Fedora
 ## Limitations
 
 + Linux host installation easiest on Fedora
-+ Runners are (also) based on Fedora. While standard images are based on Fedora,
-  running on top of ubuntu should also be possible.
 + Inside the runners: Docker not supported. Replaced by `podman` in [emulation]
   mode.
 + Inside the runners: No support for docker network, containers run in "host"
@@ -117,11 +117,11 @@ will be created.
 
 The OCI image is built in two parts:
 
-+ The [base](./Dockerfile.base) image installs a minimal set of binaries and
++ The base images -- [fedora](./Dockerfile.base.fedora) and
+  [ubuntu](./Dockerfile.base.ubuntu) -- install a minimal set of binaries and
   packages, both the ones necessary to execute the runner, but also a sane
   minimal default for workflows. Regular GitHub [runners] have a wide number of
-  installed packages. The base image has much less. Also note that it is based
-  on Fedora, rather than Ubuntu.
+  installed packages. The base images have much less.
 + The [main](./Dockerfile) installs the runner binaries and scripts and creates
   a directory structure that is used by the rest of the project.
 
