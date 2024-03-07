@@ -297,6 +297,8 @@ docker_daemon() {
     # to be able to access the socket.
     chgrp "docker" /var/run/docker.sock
     chmod g+rw /var/run/docker.sock
+    # Forwards podman's log file (must be same as in containers.conf)
+    sublog /var/log/podman.log podman &
   elif [ -n "$dockerd" ]; then
     # For docker, the user must be in the docker group to access the daemon.
     verbose "Starting $dockerd as a daemon"

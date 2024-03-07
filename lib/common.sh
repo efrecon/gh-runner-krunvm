@@ -199,3 +199,18 @@ verbose() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log NFO "$@"; fi
 info() { if [ "${KRUNVM_RUNNER_VERBOSE:-0}" -ge "1" ]; then _log NFO "$@"; fi; }
 warn() { _log WRN "$@"; }
 error() { _log ERR "$@" && exit 1; }
+
+sublog() {
+  # Eagerly wait for the log file to exist
+  while ! [ -f "${1-0}" ]; do sleep 0.1; done
+  verbose "$1 now present on disk"
+
+  # Then reroute its content through our logging printf style
+  tail -n +0 -f "$1" | while IFS= read -r line; do
+    printf '[%s] [%s] %s\n' \
+      "${2-"${KRUNVM_RUNNER_BIN:-$(basename "$0")}"}" \
+      "$(date +'%Y%m%d-%H%M%S')" \
+      "$line" \
+      >&"$KRUNVM_RUNNER_LOG"
+  done
+}
