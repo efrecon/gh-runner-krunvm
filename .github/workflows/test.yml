@@ -22,3 +22,7 @@ jobs:
           echo ""
           echo "RUNNER_ variables"
           env | grep RUNNER_
+          echo ""
+          echo "Docker Containers"
+          docker ps -a
+          docker run --rm hello-world
