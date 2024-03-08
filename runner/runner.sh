@@ -92,6 +92,14 @@ RUNNER_ID=${RUNNER_ID:-""}
 # Location of a file where to store the token
 RUNNER_TOKENFILE=${RUNNER_TOKENFILE:-""}
 
+# Location of the podman configuration files. This should match the content of
+# the base/root directory of this repository.
+RUNNER_CONTAINERS_CONFDIR=${RUNNER_CONTAINERS_CONFDIR:-"/etc/containers"}
+RUNNER_CONTAINERS_CONF="${RUNNER_CONTAINERS_CONFDIR%/}/containers.conf"
+
+# Location of the directory where the runner scripts and binaries will log
+RUNNER_LOGDIR=${RUNNER_LOGDIR:-"/var/log/runner"}
+
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Configure and run the installed GitHub runner"
 
@@ -265,6 +273,29 @@ runner_unregister() {
   if [ "${1:-0}" = 1 ] && [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
     printf %s\\n "$RUNNER_SECRET" > "${RUNNER_TOKENFILE%.*}.brk"
   fi
+
+  # Remove any lingering sublog process, if any
+  if [ -n "${SUBLOG_PID:-}" ]; then
+    kill "$SUBLOG_PID" >/dev/null 2>&1 || true
+  fi
+}
+
+
+runner_log() {
+  SUBLOG_NAME=$1; shift
+
+  # Start the main program in the background, send its output to a log file
+  "$@" > "$RUNNER_LOGDIR/${SUBLOG_NAME}.log" 2>&1 &
+  PRG_PID=$!
+
+  # Start the sublog redirector in the background, save its PID
+  sublog "$RUNNER_LOGDIR/${SUBLOG_NAME}.log" "$SUBLOG_NAME" &
+  SUBLOG_PID=$!
+
+  # Wait for the main program to finish, and once it's gone, kill the sublog
+  # redirector
+  wait "$PRG_PID"
+  kill "$SUBLOG_PID"
 }
 
 
@@ -275,8 +306,9 @@ runner_control() {
   cd "$RUNNER_BINROOT"
   script=./${1}; shift
   check_command "$script"
+  script_name=$(basename "$script")
   debug "Running $script $*"
-  RUNNER_ALLOW_RUNASROOT=1 "$script" "$@"
+  RUNNER_ALLOW_RUNASROOT=1 runner_log "${script_name%.sh}" "$script" "$@"
   cd "$cwd"
 }
 
@@ -297,6 +329,11 @@ docker_daemon() {
     # to be able to access the socket.
     chgrp "docker" /var/run/docker.sock
     chmod g+rw /var/run/docker.sock
+    # Forwards podman's log file (picked containers.conf)
+    logpath=$(grep "^events_logfile_path" "$RUNNER_CONTAINERS_CONF"|
+              cut -d = -f 2|
+              sed -E -e 's/^\s//g' -e 's/\s$//g' -e 's/^"//g' -e 's/"$//g')
+    [ -n "$logpath" ] && sublog "$logpath" podmand &
   elif [ -n "$dockerd" ]; then
     # For docker, the user must be in the docker group to access the daemon.
     verbose "Starting $dockerd as a daemon"
@@ -397,6 +434,11 @@ case "$RUNNER_SCOPE" in
     ;;
 esac
 
+# Make directory for logging
+mkdir -p "$RUNNER_LOGDIR"
+chown "$RUNNER_USER" "$RUNNER_LOGDIR"
+chmod g+rw "$RUNNER_LOGDIR"
+
 # Install runner binaries into SEPARATE directory, then configure from there
 runner_install
 runner_configure
@@ -424,8 +466,8 @@ RUNNER_PID=
 case "$RUNNER_USER" in
   root)
     if [ "$(id -u)" = "0" ]; then
-      "$@" &
-      RUNNER_PID="$!"
+      "$@" > "$RUNNER_LOGDIR/runner.log" 2>&1 &
+      RUNNER_PID=$!
     else
       error "Cannot start runner as root from non-root user"
     fi
@@ -435,10 +477,11 @@ case "$RUNNER_USER" in
       if [ "$(id -u)" = "0" ]; then
         verbose "Starting runner as $RUNNER_USER"
         chown -R "$RUNNER_USER" "$RUNNER_WORKDIR"
-        runas "$@" &
-        RUNNER_PID="$!"
+        runas "$@" > "$RUNNER_LOGDIR/runner.log" 2>&1 &
+        RUNNER_PID=$!
       elif [ "$(id -un)" = "$RUNNER_USER" ]; then
-        "$@"
+        "$@" > "$RUNNER_LOGDIR/runner.log" 2>&1 &
+        RUNNER_PID=$!
       else
         error "Cannot start runner as $RUNNER_USER from non-$RUNNER_USER user"
       fi
@@ -449,6 +492,10 @@ case "$RUNNER_USER" in
 esac
 
 if [ -n "$RUNNER_PID" ]; then
+  # Start the sublog redirector in the background, save its PID
+  sublog "$RUNNER_LOGDIR/runner.log" "runner" &
+  SUBLOG_PID=$!
+
   while [ -n "$(running "$RUNNER_PID")" ]; do
     if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -n "${RUNNER_SECRET:-}" ]; then
       if [ -f "${RUNNER_TOKENFILE%.*}.trm" ]; then
