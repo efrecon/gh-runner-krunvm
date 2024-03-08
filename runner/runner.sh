@@ -461,7 +461,6 @@ if is_true "$RUNNER_DOCKER"; then
 fi
 
 # Start the runner.
-# TODO: send logs info files at $RUNNER_LOGDIR and sublog them
 verbose "Starting runner as user '$RUNNER_USER' (current user=$(id -un)): $*"
 RUNNER_PID=
 case "$RUNNER_USER" in
