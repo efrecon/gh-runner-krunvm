@@ -207,10 +207,12 @@ sublog() {
 
   # Then reroute its content through our logging printf style
   tail -n +0 -f "$1" | while IFS= read -r line; do
-    printf '[%s] [%s] %s\n' \
-      "${2-"${KRUNVM_RUNNER_BIN:-$(basename "$0")}"}" \
-      "$(date +'%Y%m%d-%H%M%S')" \
-      "$line" \
-      >&"$KRUNVM_RUNNER_LOG"
+    if [ -n "$line" ]; then
+      printf '[%s] [%s] %s\n' \
+        "${2:-}@${KRUNVM_RUNNER_BIN:-$(basename "$0")}" \
+        "$(date +'%Y%m%d-%H%M%S')" \
+        "$line" \
+        >&"$KRUNVM_RUNNER_LOG"
+    fi
   done
 }
