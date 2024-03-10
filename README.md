@@ -22,9 +22,9 @@ Provided you are at the root directory of this project, the following would
 create two runner loops (the `-n` option) that are bound to *this* repository
 (the `efrecon/gh-runner-krunvm` principal). Runners can also be registered at
 the `organization` or `enterprise` scope using the `-s` option. In the example
-below, the value of the `-T` option should be a [PAT]. In each loop, as soon as
-one job has been picked up and executed, a new pristine runner will be created
-and registered.
+below, the value of the `-T` option should be an access [token](#github-token).
+In each loop, as soon as one job has been picked up and executed, a new pristine
+runner will be created and registered.
 
 ```bash
 ./orchestrator.sh -v -n 2 -- -T ghp_XXXX -p efrecon/gh-runner-krunvm
@@ -49,7 +49,6 @@ starting with `ORCHESTRATOR_` will affect the behaviour of the [orchestrator],
 while variables starting with `RUNNER_` will affect the behaviour of each
 [runner] (loop).
 
-  [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
   [orchestrator]: ./orchestrator.sh
   [runner]: ./runner.sh
 
@@ -93,6 +92,22 @@ installed on the host. Installation is easiest on Fedora
 
   [built]: ./.github/workflows/ci.yml
   [requirements]: https://github.com/containers/krunvm#installation
+
+## GitHub Token
+
+The [runner] script requires a token to register the runners at the principal.
+This project has been tested with classic [PAT], but should work with
+repo-scoped tokens. When creating one, you should give your token the following
+permissions.
+
++ repo
++ workflow
++ read:public_key
++ read:repo_hook
++ admin:org_hook
++ notifications
+
+  [PAT]: https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens
 
 ## Limitations
 
