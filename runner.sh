@@ -112,11 +112,14 @@ RUNNER_REPEAT=${RUNNER_REPEAT:-"-1"}
 # Secret to be used to request for loop end. Good default is a random string.
 RUNNER_SECRET=${RUNNER_SECRET:-"$(random_string)"}
 
+# Number of seconds after which to terminate (empty for never, the good default)
+RUNNER_TERMINATE=${RUNNER_TERMINATE:-""}
+
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
-while getopts "c:d:D:g:G:i:l:L:m:M:p:r:s:S:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:l:L:m:M:p:k:r:s:S:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       RUNNER_CPUS="$OPTARG";;
@@ -144,6 +147,8 @@ while getopts "c:d:D:g:G:i:l:L:m:M:p:r:s:S:T:u:Uvh-" opt; do
       fi;;
     p) # Principal to authorise the runner for, name of repo, org or enterprise
       RUNNER_PRINCIPAL="$OPTARG";;
+    k) # Kill and terminate after this many seconds
+      RUNNER_TERMINATE="$OPTARG";;
     r) # Number of times to repeat the runner loop
       RUNNER_REPEAT="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
@@ -268,6 +273,10 @@ EOF
   RUNNER_PID=$!
   eval "$optstate"; # Restore options
   verbose "Started microVM '${RUNNER_PREFIX}-$_id' with PID $RUNNER_PID"
+  if [ -n "$RUNNER_TERMINATE" ]; then
+    verbose "Terminating runner in $RUNNER_TERMINATE seconds"
+    sleep "$RUNNER_TERMINATE" && cleanup &
+  fi
   wait "$RUNNER_PID"
   RUNNER_PID=
 }
@@ -313,10 +322,10 @@ vm_terminate() {
 
 cleanup() {
   trap '' EXIT
-  if [ -n "$RUNNER_PID" ]; then
+  if [ -n "${RUNNER_PID:-}" ]; then
     vm_terminate
   fi
-  if [ -n "$RUNNER_ID" ]; then
+  if [ -n "${RUNNER_ID:-}" ]; then
     vm_delete "$RUNNER_ID"
   fi
 }
