@@ -1,0 +1,573 @@
+# The configurations that used for the recording, feel free to edit them
+config:
+
+  # Specify a command to be executed
+  # like `/bin/bash -l`, `ls`, or any other commands
+  # the default is bash for Linux
+  # or powershell.exe for Windows
+  command: ./demo/demo.sh
+  
+  # Specify the current working directory path
+  # the default is the current working directory path
+  cwd: /home/emmanuel/dev/foss/efrecon/gh-runner-krunvm
+  
+  # Export additional ENV variables
+  env:
+    recording: true
+  
+  # Explicitly set the number of columns
+  # or use `auto` to take the current
+  # number of columns of your shell
+  cols: 180
+  
+  # Explicitly set the number of rows
+  # or use `auto` to take the current
+  # number of rows of your shell
+  rows: 43
+  
+  # Amount of times to repeat GIF
+  # If value is -1, play once
+  # If value is 0, loop indefinitely
+  # If value is a positive number, loop n times
+  repeat: 0
+  
+  # Quality
+  # 1 - 100
+  quality: 100
+  
+  # Delay between frames in ms
+  # If the value is `auto` use the actual recording delays
+  frameDelay: auto
+  
+  # Maximum delay between frames in ms
+  # Ignored if the `frameDelay` isn't set to `auto`
+  # Set to `auto` to prevent limiting the max idle time
+  maxIdleTime: 2000
+  
+  # The surrounding frame box
+  # The `type` can be null, window, floating, or solid`
+  # To hide the title use the value null
+  # Don't forget to add a backgroundColor style with a null as type
+  frameBox:
+    type: floating
+    title: Terminalizer
+    style:
+      border: 0px black solid
+      # boxShadow: none
+      # margin: 0px
+  
+  # Add a watermark image to the rendered gif
+  # You need to specify an absolute path for
+  # the image on your machine or a URL, and you can also
+  # add your own CSS styles
+  watermark:
+    imagePath: null
+    style:
+      position: absolute
+      right: 15px
+      bottom: 15px
+      width: 100px
+      opacity: 0.9
+  
+  # Cursor style can be one of
+  # `block`, `underline`, or `bar`
+  cursorStyle: block
+  
+  # Font family
+  # You can use any font that is installed on your machine
+  # in CSS-like syntax
+  fontFamily: "Monaco, Lucida Console, Ubuntu Mono, Monospace"
+  
+  # The size of the font
+  fontSize: 12
+  
+  # The height of lines
+  lineHeight: 1
+  
+  # The spacing between letters
+  letterSpacing: 0
+  
+  # Theme
+  theme:
+    background: "transparent"
+    foreground: "#afafaf"
+    cursor: "#c7c7c7"
+    black: "#232628"
+    red: "#fc4384"
+    green: "#b3e33b"
+    yellow: "#ffa727"
+    blue: "#75dff2"
+    magenta: "#ae89fe"
+    cyan: "#708387"
+    white: "#d5d5d0"
+    brightBlack: "#626566"
+    brightRed: "#ff7fac"
+    brightGreen: "#c8ed71"
+    brightYellow: "#ebdf86"
+    brightBlue: "#75dff2"
+    brightMagenta: "#ae89fe"
+    brightCyan: "#b1c6ca"
+    brightWhite: "#f9f9f4"
+  
+# Records, feel free to edit them
+records:
+  - delay: 0
+    content: "\e[H\e[2J\e[3J\e[0;32m➜ \e[0;36mgh-runner-krunvm \e[0m"
+  - delay: 670
+    content: "\e["
+  - delay: 180
+    content: 0;
+  - delay: 90
+    content: '90'
+  - delay: 90
+    content: m#
+  - delay: 91
+    content: ' F'
+  - delay: 91
+    content: or
+  - delay: 90
+    content: ' t'
+  - delay: 90
+    content: he
+  - delay: 90
+    content: ' s'
+  - delay: 90
+    content: ak
+  - delay: 180
+    content: e o
+  - delay: 91
+    content: 'f '
+  - delay: 90
+    content: th
+  - delay: 89
+    content: 'e '
+  - delay: 91
+    content: as
+  - delay: 89
+    content: ci
+  - delay: 91
+    content: ic
+  - delay: 90
+    content: as
+  - delay: 90
+    content: 't:'
+  - delay: 180
+    content: ' P'
+  - delay: 90
+    content: 'AT '
+  - delay: 91
+    content: is
+  - delay: 90
+    content: ' p'
+  - delay: 91
+    content: re
+  - delay: 90
+    content: se
+  - delay: 90
+    content: nt
+  - delay: 90
+    content: ' i'
+  - delay: 91
+    content: 'n '
+  - delay: 180
+    content: RU
+  - delay: 90
+    content: NN
+  - delay: 91
+    content: ER_
+  - delay: 90
+    content: PA
+  - delay: 90
+    content: 'T '
+  - delay: 91
+    content: en
+  - delay: 90
+    content: vi
+  - delay: 90
+    content: ro
+  - delay: 90
+    content: nm
+  - delay: 90
+    content: en
+  - delay: 180
+    content: 't '
+  - delay: 91
+    content: va
+  - delay: 90
+    content: ria
+  - delay: 90
+    content: bl
+  - delay: 90
+    content: "e\e"
+  - delay: 91
+    content: '[0'
+  - delay: 90
+    content: m
+  - delay: 567
+    content: "\r\n"
+  - delay: 8
+    content: "\e[0;32m➜ \e[0;36mgh-runner-krunvm \e[0m"
+  - delay: 697
+    content: "\e"
+  - delay: 181
+    content: '[0'
+  - delay: 90
+    content: ;9
+  - delay: 90
+    content: 0m
+  - delay: 90
+    content: '#'
+  - delay: 90
+    content: ' -'
+  - delay: 90
+    content: 'r '
+  - delay: 90
+    content: '1:'
+  - delay: 91
+    content: ' t'
+  - delay: 90
+    content: o
+  - delay: 180
+    content: ' r'
+  - delay: 90
+    content: un
+  - delay: 91
+    content: ' o'
+  - delay: 90
+    content: nc
+  - delay: 90
+    content: e
+  - delay: 90
+    content: ' o'
+  - delay: 90
+    content: nl
+  - delay: 90
+    content: 'y,'
+  - delay: 90
+    content: ' t'
+  - delay: 179
+    content: h
+  - delay: 91
+    content: 'e '
+  - delay: 90
+    content: de
+  - delay: 91
+    content: fa
+  - delay: 90
+    content: ul
+  - delay: 90
+    content: t
+  - delay: 90
+    content: ' i'
+  - delay: 91
+    content: 's '
+  - delay: 90
+    content: to
+  - delay: 180
+    content: ' r'
+  - delay: 90
+    content: u
+  - delay: 91
+    content: 'n '
+  - delay: 90
+    content: fo
+  - delay: 90
+    content: re
+  - delay: 90
+    content: ve
+  - delay: 90
+    content: r
+  - delay: 90
+    content: "\e["
+  - delay: 90
+    content: 0m
+  - delay: 597
+    content: "\r\n"
+  - delay: 7
+    content: "\e[0;32m➜ \e[0;36mgh-runner-krunvm \e[0m"
+  - delay: 442
+    content: "\e"
+  - delay: 181
+    content: '[0'
+  - delay: 90
+    content: ;9
+  - delay: 90
+    content: 0m
+  - delay: 90
+    content: '#'
+  - delay: 90
+    content: ' -'
+  - delay: 91
+    content: 'k '
+  - delay: 90
+    content: '60'
+  - delay: 91
+    content: ': '
+  - delay: 89
+    content: t
+  - delay: 180
+    content: 'o '
+  - delay: 90
+    content: ru
+  - delay: 91
+    content: 'n '
+  - delay: 90
+    content: fo
+  - delay: 90
+    content: r
+  - delay: 89
+    content: ' 6'
+  - delay: 91
+    content: '0 '
+  - delay: 90
+    content: se
+  - delay: 89
+    content: co
+  - delay: 180
+    content: 'n'
+  - delay: 91
+    content: ds
+  - delay: 90
+    content: ', '
+  - delay: 91
+    content: th
+  - delay: 90
+    content: 'e '
+  - delay: 90
+    content: d
+  - delay: 90
+    content: ef
+  - delay: 91
+    content: au
+  - delay: 90
+    content: lt
+  - delay: 180
+    content: ' i'
+  - delay: 91
+    content: s
+  - delay: 90
+    content: ' t'
+  - delay: 90
+    content: 'o '
+  - delay: 91
+    content: ru
+  - delay: 90
+    content: 'n '
+  - delay: 90
+    content: f
+  - delay: 90
+    content: or
+  - delay: 90
+    content: ev
+  - delay: 90
+    content: er
+  - delay: 180
+    content: "\e["
+  - delay: 90
+    content: '0'
+  - delay: 90
+    content: m
+  - delay: 1201
+    content: "\r\n"
+  - delay: 7
+    content: "\e[0;32m➜ \e[0;36mgh-runner-krunvm \e[0m"
+  - delay: 638
+    content: "\e"
+  - delay: 180
+    content: '[1'
+  - delay: 90
+    content: m.
+  - delay: 91
+    content: /o
+  - delay: 90
+    content: r
+  - delay: 91
+    content: ch
+  - delay: 90
+    content: es
+  - delay: 90
+    content: tr
+  - delay: 90
+    content: at
+  - delay: 91
+    content: o
+  - delay: 180
+    content: r.
+  - delay: 90
+    content: sh
+  - delay: 90
+    content: ' -'
+  - delay: 91
+    content: 'v '
+  - delay: 90
+    content: '-'
+  - delay: 90
+    content: '- '
+  - delay: 91
+    content: '-r'
+  - delay: 90
+    content: ' 1'
+  - delay: 90
+    content: ' -'
+  - delay: 181
+    content: k
+  - delay: 90
+    content: ' 6'
+  - delay: 90
+    content: '0 '
+  - delay: 91
+    content: '-p'
+  - delay: 90
+    content: ' e'
+  - delay: 90
+    content: f
+  - delay: 90
+    content: re
+  - delay: 91
+    content: co
+  - delay: 90
+    content: n/
+  - delay: 180
+    content: gh
+  - delay: 90
+    content: '-'
+  - delay: 90
+    content: ru
+  - delay: 90
+    content: nn
+  - delay: 91
+    content: er
+  - delay: 90
+    content: '-k'
+  - delay: 90
+    content: r
+  - delay: 91
+    content: un
+  - delay: 90
+    content: vm
+  - delay: 90
+    content: "\e["
+  - delay: 181
+    content: 0m
+  - delay: 434
+    content: "\r\n"
+  - delay: 18
+    content: "[orchestrator] [NFO] [20240315-230942] Creating 1 isolated runner loops (using: /tmp/tmp.9elAmAB5Iv)\r\n"
+  - delay: 5
+    content: "[orchestrator] [NFO] [20240315-230942] Creating runner loop 1\r\n"
+  - delay: 34
+    content: "[runner-1] [NFO] [20240315-230942] Creating microVM 'GH-runner-1-RYiAdVt', 2 vCPUs, 1024M memory\r\n"
+  - delay: 2693
+    content: "microVM created with name: GH-runner-1-RYiAdVt\r\n"
+  - delay: 6
+    content: "[runner-1] [NFO] [20240315-230945] Creating isolation environment /tmp/tmp.9elAmAB5Iv/1-RYiAdVt.env\r\n"
+  - delay: 7
+    content: "[runner-1] [NFO] [20240315-230945] Starting microVM 'GH-runner-1-RYiAdVt' with entrypoint /opt/gh-runner-krunvm/bin/runner.sh\r\n[runner-1] [NFO] [20240315-230945] Started microVM 'GH-runner-1-RYiAdVt' with PID 95149\r\n[runner-1] [NFO] [20240315-230945] Terminating runner in 60 seconds\r\n"
+  - delay: 554
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220945] Created runner directory /_work/ubuntu-krunvm-1-RYiAdVt\0\0\r\r\n"
+  - delay: 9
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220945] Copying runner installation to /_work/ubuntu-krunvm-1-RYiAdVt/runner\0\0\r\r\n"
+  - delay: 8751
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220954] Registering repo runner 'ubuntu-krunvm-1-RYiAdVt' for https://github.com/efrecon/gh-runner-krunvm\0\0\r\r\n"
+  - delay: 9
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220954] Acquiring runner token with PAT\0\0\r\r\n"
+  - delay: 66
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[token] [NFO] [20240315-220954] Requesting runner token from https://api.github.com/repos/efrecon/gh-runner-krunvm/actions/runners/registration-token\0\0\r\r\n"
+  - delay: 1466
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220956] Created work directory /_work/ubuntu-krunvm-1-RYiAdVt/work\0\0\r\r\n"
+  - delay: 24
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220956] Configuring runner ubuntu-krunvm-1-RYiAdVt...\0\0\r\r\n"
+  - delay: 29
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-220956] /var/log/runner/config.log now present on disk\0\0\r\r\n"
+  - delay: 2026
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] --------------------------------------------------------------------------------\0\0\r\r\n"
+  - delay: 10
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |        ____ _ _   _   _       _          _        _   _                      |\0\0\r\r\n"
+  - delay: 10
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |       / ___(_) |_| | | |_   _| |__      / \\   ___| |_(_) ___  _ __  ___      |\0\0\r\r\n"
+  - delay: 14
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |      | |  _| | __| |_| | | | | '_ \\    / _ \\ / __| __| |/ _ \\| '_ \\/ __|     |\0\0\r\r\n"
+  - delay: 17
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |      | |_| | | |_|  _  | |_| | |_) |  / ___ \\ (__| |_| | (_) | | | \\__ \\     |\0\0\r\r\n"
+  - delay: 25
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |       \\____|_|\\__|_| |_|\\__,_|_.__/  /_/   \\_\\___|\\__|_|\\___/|_| |_|___/     |\0\0\r\r\n"
+  - delay: 12
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |                                                                              |\0\0\r\r\n"
+  - delay: 11
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |                       Self-hosted runner registration                        |\0\0\r\r\n"
+  - delay: 13
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] |                                                                              |\0\0\r\r\n"
+  - delay: 24
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] --------------------------------------------------------------------------------\0\0\r\r\n"
+  - delay: 13
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-220958] # Authentication\0\0\r\r\n"
+  - delay: 5858
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221004] √ Connected to GitHub\0\0\r\r\n"
+  - delay: 10
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221004] # Runner Registration\0\0\r\r\n"
+  - delay: 982
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221005] √ Runner successfully added\0\0\r\r\n"
+  - delay: 3003
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221008] √ Runner connection is good\0\0\r\r\n"
+  - delay: 12
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221008] # Runner settings\0\0\r\r\n"
+  - delay: 137
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221008] Storing runner token in /_environment/1-RYiAdVt.tkn\0\0\r\r\n"
+  - delay: 9
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [WRN] [20240315-221008] No command to run, will take defaults\0\0\r\r\n"
+  - delay: 74
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221008] Starting /bin/podman as a daemon\0\0\r\r\n"
+  - delay: 765
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221009] √ Settings Saved.\0\0\r\r\n"
+  - delay: 384
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221009] /var/log/podmand.log now present on disk\0\0\r\r\n"
+  - delay: 12
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221009] Starting runner as user 'runner' (current user=root): /_work/ubuntu-krunvm-1-RYiAdVt/runner/bin/Runner.Listener run --startuptype service\0\0\r\r\n"
+  - delay: 12
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[podmand@runner-1-RYiAdVt] [20240315-221009] {\"Status\":\"refresh\",\"Time\":\"2024-03-15T22:10:08.658278969Z\",\"Type\":\"system\",\"Attributes\":null}\0\0\r\r\n"
+  - delay: 44
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221009] Starting runner as runner\0\0\r\r\n"
+  - delay: 3732
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221013] /var/log/runner/runner.log now present on disk\0\0\r\r\n"
+  - delay: 6033
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner@runner-1-RYiAdVt] [20240315-221019] √ Connected to GitHub\0\0\r\r\n"
+  - delay: 3002
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner@runner-1-RYiAdVt] [20240315-221022] Current runner version: '2.314.1'\0\0\r\r\n"
+  - delay: 16
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner@runner-1-RYiAdVt] [20240315-221022] 2024-03-15 22:10:21Z: Listening for Jobs\0\0\r\r\n"
+  - delay: 22829
+    content: "[runner-1] [NFO] [20240315-231045] Requesting termination via /tmp/tmp.9elAmAB5Iv/1-RYiAdVt.trm\r\n"
+  - delay: 503
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221045] Termination file found, stopping runner\0\0\r\r\n"
+  - delay: 10
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221045] Caught termination signal, unregistering runner\0\0\r\r\n"
+  - delay: 18
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221045] Reading runner token from /_environment/1-RYiAdVt.tkn\0\0\r\r\n"
+  - delay: 28
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221045] Removing runner at GitHub\0\0\r\r\n"
+  - delay: 34
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221045] /var/log/runner/config.log now present on disk\0\0\r\r\n"
+  - delay: 1688
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221047] # Runner removal\0\0\r\r\n"
+  - delay: 319
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221048] # Runner removal\0\0\r\r\n"
+  - delay: 8985
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[runner-1-RYiAdVt] [NFO] [20240315-221057] Removed runner token file at /_environment/1-RYiAdVt.tkn\0\0\r\r\n"
+  - delay: 19
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Runner removed successfully\0\0\r\r\n"
+  - delay: 10
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Removed .credentials\0\0\r\r\n"
+  - delay: 9
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Removed .runner\0\0\r\r\n"
+  - delay: 658
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Runner removed successfully\0\0\r\r\n"
+  - delay: 8
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Removed .credentials\0\0\r\r\n"
+  - delay: 13
+    content: "\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0[config@runner-1-RYiAdVt] [20240315-221057] √ Removed .runner\0\0\r\r\n"
+  - delay: 500
+    content: "[runner-1] [NFO] [20240315-231058] Removing microVM 'GH-runner-1-RYiAdVt'\r\n"
+  - delay: 271
+    content: "[runner-1] [NFO] [20240315-231058] Removing microVM 'GH-runner-1-RYiAdVt'\r\n"
+  - delay: 203
+    content: "[orchestrator] [NFO] [20240315-231059] Killing runner loop 95055\r\n"
