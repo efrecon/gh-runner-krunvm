@@ -289,8 +289,10 @@ vm_delete() {
     warning "Removing isolation environment ${RUNNER_ENVIRONMENT}/${1}.env"
     rm -f "${RUNNER_ENVIRONMENT}/${1}.env"
   fi
-  verbose "Removing microVM '${RUNNER_PREFIX}-$1'"
-  run_krunvm delete "${RUNNER_PREFIX}-$1"
+  if run_krunvm list | grep -qE "^${RUNNER_PREFIX}-$1"; then
+    verbose "Removing microVM '${RUNNER_PREFIX}-$1'"
+    run_krunvm delete "${RUNNER_PREFIX}-$1"
+  fi
 }
 
 vm_terminate() {
