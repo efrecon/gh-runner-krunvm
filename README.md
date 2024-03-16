@@ -8,6 +8,8 @@ close to running containers. [krunvm] creates and starts VMs based on the
 multi-platform OCI images created for this project -- [ubuntu] (default) or
 [fedora].
 
+![Demo](./demo/demo.gif)
+
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
   [krunvm]: https://github.com/containers/krunvm
