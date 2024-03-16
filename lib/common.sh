@@ -206,7 +206,7 @@ sublog() {
   verbose "$1 now present on disk"
 
   # Then reroute its content through our logging printf style
-  tail -n +0 -f "$1" | while IFS= read -r line; do
+  tail -n +0 -f "$1" 2>/dev/null | while IFS= read -r line; do
     if [ -n "$line" ]; then
       printf '[%s] [%s] %s\n' \
         "${2:-}@${KRUNVM_RUNNER_BIN:-$(basename "$0")}" \
