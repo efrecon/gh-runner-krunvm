@@ -2,8 +2,7 @@
 
 This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
 [krunvm]. [krunvm] creates [microVM]s, so the project enables fully isolated
-[runners] inside your infrastruture, as opposed to [solutions] based on
-Kubernetes or Docker containers. MicroVMs boot fast, providing an experience
+[runners] inside your infrastruture. MicroVMs boot fast, providing an experience
 close to running containers. [krunvm] creates and starts VMs based on the
 multi-platform OCI images created for this project -- [ubuntu] (default) or
 [fedora].
