@@ -236,7 +236,11 @@ runner_unregister() {
   trap - INT TERM EXIT
 
   # Remember or request (again) a runner registration token
-  verbose "Caught termination signal, unregistering runner"
+  if [ "${1:-0}" = "1" ]; then
+    verbose "Caught termination signal/request, unregistering runner"
+  else
+    verbose "Caught regular exit signal, unregistering runner"
+  fi
   if [ -n "${RUNNER_PAT:-}" ]; then
     if [ -n "${RUNNER_TOKENFILE:-}" ] && [ -f "$RUNNER_TOKENFILE" ]; then
       verbose "Reading runner token from $RUNNER_TOKENFILE"
