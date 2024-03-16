@@ -93,7 +93,7 @@ cleanup() {
 
   for pid in $ORCHESTRATOR_PIDS; do
     verbose "Killing runner loop $pid"
-    kill "$pid"
+    kill "$pid" 2>/dev/null || true
   done
   verbose "Waiting for runners to die"
   # shellcheck disable=SC2086 # We want to wait for all pids
