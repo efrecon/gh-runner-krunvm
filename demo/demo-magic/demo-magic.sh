@@ -88,13 +88,13 @@ function p() {
   fi
 
   # render the prompt
-  x=$(PS1="$DEMO_PROMPT" "$BASH" --norc -i </dev/null 2>&1 | sed -n '${s/^\(.*\)exit$/\1/p;}')
+  x=$(PS1="$DEMO_PROMPT" "$BASH" --norc -i </dev/null 2>&1 | sed -n 's/^\(.*\)exit$/\1/p;')
 
   # show command number is selected
   if $SHOW_CMD_NUMS; then
-   printf "[$((++C_NUM))] $x"
+   printf "[$((++C_NUM))] %s" "$x"
   else
-   printf "$x"
+   printf "%s" "$x"
   fi
 
   # wait for the user to press a key before typing the command
@@ -105,7 +105,7 @@ function p() {
   if [[ -z $TYPE_SPEED ]]; then
     echo -en "$cmd"
   else
-    echo -en "$cmd" | pv -qL $[$TYPE_SPEED+(-2 + RANDOM%5)];
+    echo -en "$cmd" | pv -qL $((TYPE_SPEED+(-2 + RANDOM%5)));
   fi
 
   # wait for the user to press a key before moving on
@@ -151,20 +151,20 @@ function pei {
 ##
 function cmd() {
   # render the prompt
-  x=$(PS1="$DEMO_PROMPT" "$BASH" --norc -i </dev/null 2>&1 | sed -n '${s/^\(.*\)exit$/\1/p;}')
-  printf "$x\033[0m"
-  read command
+  x=$(PS1="$DEMO_PROMPT" "$BASH" --norc -i </dev/null 2>&1 | sed -n 's/^\(.*\)exit$/\1/p;')
+  printf "%s\033[0m" "$x"
+  read -r command
   run_cmd "${command}"
 }
 
-function run_cmd() {
-  function handle_cancel() {
-    printf ""
-  }
+function handle_cancel() {
+  printf ""
+}
 
+function run_cmd() {
   trap handle_cancel SIGINT
   stty -echoctl
-  eval $@
+  eval "$*"
   stty echoctl
   trap - SIGINT
 }
@@ -215,6 +215,11 @@ while getopts ":dhncw:" opt; do
       ;;
     w)
       PROMPT_TIMEOUT=$OPTARG
+      ;;
+    *)
+      echo "Invalid option: -$OPTARG" >&2
+      usage
+      exit 1
       ;;
   esac
 done
