@@ -13,7 +13,9 @@ fi
 
 clear
 
-pe "# For the sake of the asciicast: PAT is present in RUNNER_PAT environment variable"
+pe "# Let's start one (short-lived) runner for this repository"
+pe "# A PAT is present in the environment variable RUNNER_PAT"
+pe "# Just for the demo, we will use two seldom used options to show teardown"
+pe "# -k 70: to run for 70 seconds only, the default is to run forever"
 pe "# -r 1: to run once only, the default is to run forever"
-pe "# -k 60: to run for 60 seconds, the default is to run forever"
-pe "./orchestrator.sh -v -- -r 1 -k 60 -p efrecon/gh-runner-krunvm"
+pe "./orchestrator.sh -v -- -r 1 -k 70 -p efrecon/gh-runner-krunvm"
