@@ -30,14 +30,21 @@ Each runner loop implemented in the `runner.sh` script is allocated a "secret"
 script inside the microVM, a file with the same name (and location) as the token
 file, but the extension `.brk` (break) is created with the content of the
 secret. Once a microVM has ended, the `runner.sh` loop script will detect if the
-`.brk` file exists and contain the secret. If it does, it will abort the loop --
-instead of creating yet another runner. Using a random secret is for security
+`.brk` file exists and contains the secret. If it does, it will abort the loop
+-- instead of creating yet another runner. Using a random secret is for security
 and to avoid that workflows are able to actually force end the runner loop.
 Since the value of the secret is passed through the `.env` file that is
 automatically removed as soon as the microVM has booted is running the
 `runner.sh` script, workflows are not able to break the external loop: they are
 able to create files in the `/_environment` directory, but they cannot know the
 value of the secret to put into the file to force the exiting handshake.
+
+The same type of handshaking happens when the main runner loop is terminating,
+for example after the life-time period provided with the command-line option
+`-k`. In that case, a file containing the secret and ending with the `.trm`
+extension is created in what the VM sees as the `/_environment` directory. When
+such a file is present, the main `runner.sh` script inside the VM will kill the
+GitHub runner process and unregister it.
 
 ## Changes to the Installation Scripts
 
