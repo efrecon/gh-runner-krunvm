@@ -1840,4 +1840,4 @@ records:
   - delay: 96
     content: "[orchestrator] [NFO] [20240323-165120] Removing isolation environment /tmp/tmp.jzAtgqo9gy\r\n"
   - delay: 5000
-    content: ""
+    content: "\0"
