@@ -13,7 +13,6 @@ multi-platform OCI images created for this project -- [ubuntu] (default) or
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
   [krunvm]: https://github.com/containers/krunvm
   [microVM]: https://github.com/infracloudio/awesome-microvm
-  [solutions]: https://github.com/jonico/awesome-runners
   [ubuntu]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-ubuntu
   [fedora]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-fedora
 
