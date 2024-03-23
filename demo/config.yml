@@ -15,12 +15,12 @@ env:
 # Explicitly set the number of columns
 # or use `auto` to take the current
 # number of columns of your shell
-cols: 180
+cols: 132
 
 # Explicitly set the number of rows
 # or use `auto` to take the current
 # number of rows of your shell
-rows: 40
+rows: 43
 
 # Amount of times to repeat GIF
 # If value is -1, play once
@@ -50,8 +50,8 @@ frameBox:
   title: GitHub Runner in KrunVM
   style:
     border: 0px black solid
-    # boxShadow: none
-    # margin: 0px
+    boxShadow: none
+    margin: 0px
 
 # Add a watermark image to the rendered gif
 # You need to specify an absolute path for
