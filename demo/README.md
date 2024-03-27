@@ -24,3 +24,15 @@ terminalizer render demo/demo.yml --output demo/demo.gif
 
   [terminalizer]: https://github.com/faressoft/terminalizer
   [play]: https://github.com/faressoft/terminalizer?tab=readme-ov-file#play
+
+## Optimise
+
+Once generated, you can optimise the size of the target GIF using online
+converters, e.x. [xconvert]. At [xconvert], use the following options:
+
++ Keep original quality
++ Keep original size
++ Reduce the colour palette and keep 128 colours
++ Drop every second frame.
+
+  [xconvert]: https://www.xconvert.com/compress-gif
