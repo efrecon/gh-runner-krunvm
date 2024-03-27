@@ -132,7 +132,6 @@ trap cleanup EXIT
 # Pass essential variables, verbosity and log configuration to main runner
 # script.
 RUNNER_PREFIX=$ORCHESTRATOR_PREFIX
-RUNNER_ENVIRONMENT="${ORCHESTRATOR_ENVIRONMENT:-}"
 RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 RUNNER_LOG=$ORCHESTRATOR_LOG
 export RUNNER_PREFIX RUNNER_ENVIRONMENT RUNNER_VERBOSE RUNNER_LOG
@@ -141,6 +140,18 @@ export RUNNER_PREFIX RUNNER_ENVIRONMENT RUNNER_VERBOSE RUNNER_LOG
 # indefinitely create ephemeral runners. Looping is implemented in runner.sh,
 # in the same directory as this script.
 for i in $(seq 1 "$ORCHESTRATOR_RUNNERS"); do
+  # Create a separate environment for each runner loop, to further isolate
+  # runners from one another.
+  if [ -n "$ORCHESTRATOR_ENVIRONMENT" ]; then
+    RUNNER_ENVIRONMENT="$ORCHESTRATOR_ENVIRONMENT/${ORCHESTRATOR_PREFIX}-$(printf %.3d\\n "${i}")"
+    if ! [ -d "$RUNNER_ENVIRONMENT" ]; then
+      mkdir -p "$RUNNER_ENVIRONMENT"
+    fi
+  else
+    RUNNER_ENVIRONMENT=""
+  fi
+  export RUNNER_ENVIRONMENT
+
   # Launch a runner loop in the background and collect its PID in the
   # ORCHESTRATOR_PIDS variable.
   verbose "Creating runner loop $i"
@@ -156,9 +167,9 @@ for i in $(seq 1 "$ORCHESTRATOR_RUNNERS"); do
   if [ "$i" -lt "$ORCHESTRATOR_RUNNERS" ]; then
     # Wait for the runner token to be ready before starting the next runner,
     # or, at least, sleep for some time.
-    if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
-      wait_path -f "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn" -1 5
-      token=$(find_pattern "${ORCHESTRATOR_ENVIRONMENT}/${i}-*.tkn")
+    if [ -n "${RUNNER_ENVIRONMENT:-}" ]; then
+      wait_path -f "${RUNNER_ENVIRONMENT}/${i}-*.tkn" -1 5
+      token=$(find_pattern "${RUNNER_ENVIRONMENT}/${i}-*.tkn")
       rm -f "$token"
       verbose "Removed token file $token"
     elif [ -n "$ORCHESTRATOR_SLEEP" ] && [ "$ORCHESTRATOR_SLEEP" -gt 0 ]; then

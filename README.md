@@ -39,15 +39,14 @@ the base repository, e.g. `ubuntu` and `krunvm`. The GitHub runner
 implementation will automatically add other labels in addition to those.
 
 In the example above, the double-dash `--` separates options given to the
-user-facing [orchestrator] from options to the loop implementation
-[runner](./runner.sh) script. All options appearing after the `--` will be
-blindly passed to the [runner] loop and script. All scripts within the project
-accepts short options only and can either be controlled through options or
-environment variables -- but CLI options have precedence. Running scripts with
-the `-h` option will provide help and a list of those variables. Variables
-starting with `ORCHESTRATOR_` will affect the behaviour of the [orchestrator],
-while variables starting with `RUNNER_` will affect the behaviour of each
-[runner] (loop).
+user-facing [orchestrator] from options to the loop implementation [runner]
+script. All options appearing after the `--` will be blindly passed to the
+[runner] loop and script. All scripts within the project accepts short options
+only and can either be controlled through options or environment variables --
+but CLI options have precedence. Running scripts with the `-h` option will
+provide help and a list of those variables. Variables starting with
+`ORCHESTRATOR_` will affect the behaviour of the [orchestrator], while variables
+starting with `RUNNER_` will affect the behaviour of each [runner] (loop).
 
   [orchestrator]: ./orchestrator.sh
   [runner]: ./runner.sh
@@ -68,9 +67,12 @@ while variables starting with `RUNNER_` will affect the behaviour of each
 + Ability to mount local directories to cache local runner-based requirements or
   critical software tools.
 + Good compatibility with the regular GitHub [runners]: same user ID, member of
-  the `docker` group, etc.
-+ In theory, the main [image] should be able to be used in more traditional
-  container-based solutions -- perhaps [sysbox]? Reports/changes are welcome.
+  the `docker` group, password-less `sudo`, etc.
++ In theory, the main [ubuntu] and [fedora] images should be able to be used in
+  more traditional container-based solutions -- perhaps [sysbox]? Reports and/or
+  changes are welcome.
++ Relaying of the container daemon logs to provide for improved debugging of
+  complex workflows.
 
   [sysbox]: https://github.com/nestybox/sysbox
 
@@ -89,6 +91,8 @@ installed on the host. Installation is easiest on Fedora
 + `jq`
 + `buildah`
 + `krunvm` (and its [requirements])
+
+Note: You do not need `podman`.
 
   [built]: ./.github/workflows/ci.yml
   [requirements]: https://github.com/containers/krunvm#installation
@@ -122,13 +126,12 @@ permissions.
 
 ## Architecture and Design
 
-The [orchestrator](./orchestrator.sh) creates as many loops of ephemeral runners
-as requested. These loops are implemented as part of the
-[runner.sh](./runner.sh) script: the script will create a microVM based on the
-default image (see below), memory and vCPU requirement. It will then start that
-microVM using `krunvm` and that will start an (ephemeral) [runner][self]. As
-soon as a job has been executed on that runner, the microVM will end and a new
-will be created.
+The [orchestrator] creates as many loops of ephemeral runners as requested.
+These loops are implemented as part of the [runner.sh][runner] script: the
+script will create a microVM based on the default image (see below), memory and
+vCPU requirement. It will then start that microVM using `krunvm` and that will
+start an (ephemeral) GitHub [runner][self]. As soon as a job has been executed
+on that runner, the microVM will end and a new will be created.
 
 The OCI image is built in two parts:
 
@@ -150,15 +153,15 @@ containers with the `--network host` option. This is made transparent through a
 docker CLI [wrapper](./base/docker.sh) that will automatically add this option
 to all (relevant) commands.
 
-When the microVM starts, the [runner.sh](./runner/runner.sh) script will be
-started. This script will pick its options using an `.env` file, shared from the
-host. The file will be sourced and removed at once. This ensures that secrets
-are not leaked to the workflows through the process table or a file. Upon start,
-the script will [request](./runner/token.sh) a runner token, configure the
-runner and then start the actions runner .NET implementation, under the `runner`
-user. The `runner` user shares the same id as the one at GitHub and is also a
-member of the `docker` group. Similarily to GitHub runners, the user is capable
-of `sudo` without a password.
+When the microVM starts, the [entrypoint.sh](./runner/entrypoint.sh) script will
+be started. This script will pick its options using an `.env` file, shared from
+the host. The file will be sourced and removed at once. This ensures that
+secrets are not leaked to the workflows through the process table or a file.
+Upon start, the script will [request](./runner/token.sh) a runner token,
+configure the runner and then start the actions runner .NET implementation,
+under the `runner` user. The `runner` user shares the same id as the one at
+GitHub and is also a member of the `docker` group. Similarily to GitHub runners,
+the user is capable of `sudo` without a password.
 
 Runner tokens are written to the directory that is shared with the host. This is
 used during initial synchronisation, to avoid starting up several runners at the

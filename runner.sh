@@ -195,10 +195,10 @@ check_positive_number "$RUNNER_MEMORY" "Memory (in MB)"
 # Decide which runner.sh implementation (this is the "entrypoint" of the
 # microVM) to use: the one from the mount point, or the built-in one.
 if [ -z "$RUNNER_DIR" ]; then
-  RUNNER_ENTRYPOINT=/opt/gh-runner-krunvm/bin/runner.sh
+  RUNNER_ENTRYPOINT=/opt/gh-runner-krunvm/bin/entrypoint.sh
 else
-  check_command "${RUNNER_ROOTDIR}/runner/runner.sh"
-  RUNNER_ENTRYPOINT=${RUNNER_DIR%/}/runner/runner.sh
+  check_command "${RUNNER_ROOTDIR}/runner/entrypoint.sh"
+  RUNNER_ENTRYPOINT=${RUNNER_DIR%/}/runner/entrypoint.sh
 fi
 
 # Create the VM used for orchestration. Add --volume options for all necessary
