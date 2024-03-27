@@ -67,10 +67,12 @@ starting with `RUNNER_` will affect the behaviour of each [runner] (loop).
 + Ability to mount local directories to cache local runner-based requirements or
   critical software tools.
 + Good compatibility with the regular GitHub [runners]: same user ID, member of
-  the `docker` group, etc.
+  the `docker` group, password-less `sudo`, etc.
 + In theory, the main [ubuntu] and [fedora] images should be able to be used in
-  more traditional container-based solutions -- perhaps [sysbox]?
-  Reports/changes are welcome.
+  more traditional container-based solutions -- perhaps [sysbox]? Reports and/or
+  changes are welcome.
++ Relaying of the container daemon logs to provide for improved debugging of
+  complex workflows.
 
   [sysbox]: https://github.com/nestybox/sysbox
 
@@ -89,6 +91,8 @@ installed on the host. Installation is easiest on Fedora
 + `jq`
 + `buildah`
 + `krunvm` (and its [requirements])
+
+Note: You do not need `podman`.
 
   [built]: ./.github/workflows/ci.yml
   [requirements]: https://github.com/containers/krunvm#installation
