@@ -100,6 +100,9 @@ RUNNER_CONTAINERS_CONF="${RUNNER_CONTAINERS_CONFDIR%/}/containers.conf"
 # Location of the directory where the runner scripts and binaries will log
 RUNNER_LOGDIR=${RUNNER_LOGDIR:-"/var/log/runner"}
 
+# Default set of labels to attach to the runner when none set
+RUNNER_DEFAULT_LABELS=${RUNNER_DEFAULT_LABELS:-"krun"}
+
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Configure and run the installed GitHub runner"
 
@@ -161,13 +164,18 @@ KRUNVM_RUNNER_BIN="${KRUNVM_RUNNER_BIN%.sh}-$RUNNER_ID"
 # minimal verification of the installation through checking that there is a
 # config.sh script executable within the copy.
 runner_install() {
-  if ! [ -d "${RUNNER_WORKDIR%/}" ]; then
-    mkdir -p "${RUNNER_WORKDIR%/}"
-    verbose "Created runner directory ${RUNNER_WORKDIR%/}"
+  if is_true "$RUNNER_EPHEMERAL"; then
+    debug "Ephemeral runner: no copy made, running from $RUNNER_INSTDIR"
+    RUNNER_BINROOT="$RUNNER_INSTDIR"
+  else
+    if ! [ -d "${RUNNER_WORKDIR%/}" ]; then
+      mkdir -p "${RUNNER_WORKDIR%/}"
+      verbose "Created runner directory ${RUNNER_WORKDIR%/}"
+    fi
+    RUNNER_BINROOT="${RUNNER_WORKDIR%/}/runner"
+    verbose "Copying runner installation to $RUNNER_BINROOT"
+    cp -rf "$RUNNER_INSTDIR" "$RUNNER_BINROOT" 2>/dev/null
   fi
-  RUNNER_BINROOT="${RUNNER_WORKDIR%/}/runner"
-  verbose "Copying runner installation to $RUNNER_BINROOT"
-  cp -rf "$RUNNER_INSTDIR" "$RUNNER_BINROOT" 2>/dev/null
   check_command "${RUNNER_BINROOT}/config.sh"
 }
 
@@ -398,14 +406,14 @@ fi
 debug "Setting up missing defaults"
 distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
-RUNNER_PREFIX=${RUNNER_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
+RUNNER_PREFIX=${RUNNER_PREFIX:-"${RUNNER_DISTRO}-krun"}
 RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_PREFIX}-$RUNNER_ID"}
 
 RUNNER_WORKDIR=${RUNNER_WORKDIR:-"/_work/${RUNNER_NAME}"}
 if [ -n "${distro:-}" ]; then
-  RUNNER_LABELS=${RUNNER_LABELS:-"krunvm,${RUNNER_DISTRO}"}
+  RUNNER_LABELS=${RUNNER_LABELS:-"${RUNNER_DEFAULT_LABELS%,},${RUNNER_DISTRO}"}
 else
-  RUNNER_LABELS=${RUNNER_LABELS:-"krunvm"}
+  RUNNER_LABELS=${RUNNER_LABELS:-"${RUNNER_DEFAULT_LABELS%,}"}
 fi
 
 # Find the (versioned) directory containing the full installation of the runner
@@ -449,7 +457,7 @@ runner_configure
 
 if [ "$#" = 0 ]; then
   warn "No command to run, will take defaults"
-  set -- "${RUNNER_WORKDIR%/}/runner/bin/Runner.Listener" run --startuptype service
+  set -- "${RUNNER_BINROOT%/}/bin/Runner.Listener" run --startuptype service
 fi
 
 # Capture termination signals. Pass a boolean to runner_unregister: don't break
@@ -480,7 +488,7 @@ case "$RUNNER_USER" in
     if id "$RUNNER_USER" >/dev/null 2>&1; then
       if [ "$(id -u)" = "0" ]; then
         verbose "Starting runner as $RUNNER_USER"
-        chown -R "$RUNNER_USER" "$RUNNER_WORKDIR"
+        chown -R "$RUNNER_USER" "$RUNNER_WORKDIR" "$RUNNER_BINROOT"
         runas "$@" > "$RUNNER_LOGDIR/runner.log" 2>&1 &
         RUNNER_PID=$!
       elif [ "$(id -un)" = "$RUNNER_USER" ]; then

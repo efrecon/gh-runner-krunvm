@@ -251,7 +251,6 @@ EOF
     set -- -k "/${RUNNER_VM_ENVDIR}/${_id}.tkn" "$@"
   else
     set -- \
-        -e \
         -g "$RUNNER_GITHUB" \
         -G "$RUNNER_GROUP" \
         -i "$_id" \
@@ -262,6 +261,9 @@ EOF
         -S "$RUNNER_SECRET" \
         -T "$RUNNER_PAT" \
         -u "$RUNNER_USER"
+    if is_true "$RUNNER_EPHEMERAL"; then
+      set -- -e "$@"
+    fi
     for _ in $(seq 1 "$RUNNER_VERBOSE"); do
       set -- -v "$@"
     done
