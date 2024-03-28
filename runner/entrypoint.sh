@@ -406,7 +406,7 @@ fi
 debug "Setting up missing defaults"
 distro=$(get_env "/etc/os-release" "ID")
 RUNNER_DISTRO=${RUNNER_DISTRO:-"${distro:-"unknown}"}"}
-RUNNER_PREFIX=${RUNNER_PREFIX:-"${RUNNER_DISTRO}-krunvm"}
+RUNNER_PREFIX=${RUNNER_PREFIX:-"${RUNNER_DISTRO}-krun"}
 RUNNER_NAME=${RUNNER_NAME:-"${RUNNER_PREFIX}-$RUNNER_ID"}
 
 RUNNER_WORKDIR=${RUNNER_WORKDIR:-"/_work/${RUNNER_NAME}"}
