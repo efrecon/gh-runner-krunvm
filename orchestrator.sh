@@ -31,6 +31,8 @@ ORCHESTRATOR_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")
 
 # shellcheck source=lib/common.sh
 . "$ORCHESTRATOR_ROOTDIR/lib/common.sh"
+# shellcheck source=lib/microvm.sh
+. "$ORCHESTRATOR_ROOTDIR/lib/microvm.sh"
 
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
@@ -56,11 +58,14 @@ ORCHESTRATOR_ISOLATION=${ORCHESTRATOR_ISOLATION:-"1"}
 # has been turned on.
 ORCHESTRATOR_SLEEP=${ORCHESTRATOR_SLEEP:-"30"}
 
+# Runtime to use when managing microVMs.
+ORCHESTRATOR_RUNTIME=${ORCHESTRATOR_RUNTIME:-""}
+
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
 
 
-while getopts "s:Il:n:p:vh-" opt; do
+while getopts "s:Il:n:p:R:vh-" opt; do
   case "$opt" in
     s) # Number of seconds to sleep between microVM creation at start, when no isolation
       ORCHESTRATOR_SLEEP="$OPTARG";;
@@ -72,6 +77,8 @@ while getopts "s:Il:n:p:vh-" opt; do
       ORCHESTRATOR_RUNNERS="$OPTARG";;
     p) # Prefix to use for the VM name
       ORCHESTRATOR_PREFIX="$OPTARG";;
+    R) # Runtime to use when managing microVMs
+      ORCHESTRATOR_RUNTIME="$OPTARG";;
     v) # Increase verbosity, will otherwise log on errors/warnings only
       ORCHESTRATOR_VERBOSE=$((ORCHESTRATOR_VERBOSE+1));;
     h) # Print help and exit
@@ -99,14 +106,14 @@ cleanup() {
   # shellcheck disable=SC2086 # We want to wait for all pids
   waitpid $ORCHESTRATOR_PIDS
 
-  if run_krunvm list | grep -qE "^${ORCHESTRATOR_PREFIX}-"; then
-    while IFS= read -r vm; do
+  while IFS= read -r vm; do
+    if [ -n "$vm" ]; then
       verbose "Removing microVM $vm"
-      run_krunvm delete "$vm"
-    done <<EOF
-$(run_krunvm list | grep -E "^${ORCHESTRATOR_PREFIX}-")
+      microvm_delete "$vm"
+    fi
+  done <<EOF
+$(microvm_list | grep -E "^${ORCHESTRATOR_PREFIX}-")
 EOF
-  fi
 
   if [ -n "${ORCHESTRATOR_ENVIRONMENT:-}" ]; then
     verbose "Removing isolation environment $ORCHESTRATOR_ENVIRONMENT"
@@ -114,8 +121,8 @@ EOF
   fi
 }
 
-check_command buildah
-check_command krunvm
+# Pass the runtime to the microvm script
+microvm_runtime "$ORCHESTRATOR_RUNTIME"
 
 check_positive_number "$ORCHESTRATOR_RUNNERS" "Number of runners"
 
@@ -134,7 +141,8 @@ trap cleanup EXIT
 RUNNER_PREFIX=$ORCHESTRATOR_PREFIX
 RUNNER_VERBOSE=$ORCHESTRATOR_VERBOSE
 RUNNER_LOG=$ORCHESTRATOR_LOG
-export RUNNER_PREFIX RUNNER_ENVIRONMENT RUNNER_VERBOSE RUNNER_LOG
+RUNNER_RUNTIME=$ORCHESTRATOR_RUNTIME
+export RUNNER_PREFIX RUNNER_ENVIRONMENT RUNNER_VERBOSE RUNNER_LOG RUNNER_RUNTIME
 
 # Create runner loops in the background. One per runner. Each loop will
 # indefinitely create ephemeral runners. Looping is implemented in runner.sh,
