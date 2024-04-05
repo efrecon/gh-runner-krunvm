@@ -119,6 +119,8 @@ EOF
     verbose "Removing isolation environment $ORCHESTRATOR_ENVIRONMENT"
     rm -rf "$ORCHESTRATOR_ENVIRONMENT"
   fi
+
+  microvm_cleanup
 }
 
 # Pass the runtime to the microvm script

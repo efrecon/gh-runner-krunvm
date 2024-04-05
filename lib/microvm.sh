@@ -7,6 +7,9 @@
 # automatically selected.
 : "${KRUNVM_RUNNER_RUNTIME:=""}"
 
+# Directory used for VM->PID mapping when using krunvm
+: "${KRUNVM_RUNNER_STORAGE:=""}"
+
 # Run krunvm with the provided arguments, behind a buildah unshare.
 run_krunvm() {
   debug "Running krunvm $*"
@@ -50,6 +53,9 @@ microvm_runtime() {
     krunvm)
       check_command krunvm
       check_command buildah
+      if [ -z "$KRUNVM_RUNNER_STORAGE" ]; then
+        KRUNVM_RUNNER_STORAGE="$(mktemp -d)"
+      fi
       ;;
     *)
       error "Unknown microVM runtime: $KRUNVM_RUNNER_RUNTIME"
@@ -168,6 +174,7 @@ EOF
       run_krunvm start "$KRUNVM_RUNNER_NAME" "$RUNNER_ENTRYPOINT" -- "$@" </dev/null &
       KRUNVM_RUNNER_PID=$!
       eval "$optstate"; # Restore options
+      printf %d\\n "$KRUNVM_RUNNER_PID" > "${KRUNVM_RUNNER_STORAGE}/${KRUNVM_RUNNER_NAME}.pid"
       verbose "Started microVM '$KRUNVM_RUNNER_NAME' with PID $KRUNVM_RUNNER_PID"
       wait "$KRUNVM_RUNNER_PID"
       KRUNVM_RUNNER_PID=
@@ -190,6 +197,7 @@ microvm_wait() {
     podman*)
       podman wait "$1";;
     krunvm)
+      KRUNVM_RUNNER_PID=$(cat "${KRUNVM_RUNNER_STORAGE}/$1.pid")
       if [ -n "$KRUNVM_RUNNER_PID" ]; then
         # shellcheck disable=SC2046 # We want to wait for all children
         waitpid $(ps_tree "$KRUNVM_RUNNER_PID"|tac)
@@ -216,10 +224,12 @@ microvm_stop() {
       # TODO: Specify howlog to wait between TERM and KILL?
       podman stop "$1";;
     krunvm)
+      KRUNVM_RUNNER_PID=$(cat "${KRUNVM_RUNNER_STORAGE}/$1.pid")
       if [ -n "$KRUNVM_RUNNER_PID" ]; then
         kill_tree "$KRUNVM_RUNNER_PID"
         # shellcheck disable=SC2046 # We want to wait for all children
         microvm_wait "$1"
+        rm -f "${KRUNVM_RUNNER_STORAGE}/$1.pid" || true
       fi
       ;;
     *)
@@ -241,7 +251,8 @@ microvm_delete() {
       podman rm -f "$1";;
     krunvm)
       verbose "Removing microVM '$1'"
-      run_krunvm delete "$1";;
+      run_krunvm delete "$1"
+      ;;
     *)
       error "Unknown microVM runtime: $KRUNVM_RUNNER_RUNTIME"
       ;;
@@ -265,5 +276,8 @@ microvm_pull() {
       error "Unknown microVM runtime: $KRUNVM_RUNNER_RUNTIME"
       ;;
   esac
+}
 
+microvm_cleanup() {
+  [ -n "$KRUNVM_RUNNER_STORAGE" ] && rm -rf "$KRUNVM_RUNNER_STORAGE"
 }

@@ -325,6 +325,8 @@ cleanup() {
     vm_terminate "$RUNNER_ID"
     vm_delete "$RUNNER_ID"
   fi
+
+  microvm_cleanup
 }
 
 trap cleanup EXIT
