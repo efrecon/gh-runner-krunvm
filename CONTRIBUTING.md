@@ -67,3 +67,12 @@ Instead, pass `-D /local` to the [`runner.sh`](./runner.sh) script. This will
 mount the [`runner`](./runner/) directory into the microVM at `/local` and run
 the scripts that it contains from there instead. Which "entrypoint" to use is
 driven by the `RUNNER_ENTRYPOINT` variable in [`runner.sh`](./runner.sh).
+
+## Cleanup
+
+During development, many images might be created. To clean them away, you can
+run the following:
+
+```bash
+buildah rmi $(buildah images --format '{{.ID}}')
+```
