@@ -155,13 +155,14 @@ microvm_run() {
       if [ -n "$KRUNVM_RUNNER_VOLS" ]; then
         while IFS= read -r mount || [ -n "$mount" ]; do
           if [ -n "$mount" ]; then
-            set -- --volume "$mount" "$@"
+            set -- --volume "${mount}:Z,rw" "$@"
           fi
         done <<EOF
 $(printf %s\\n "$KRUNVM_RUNNER_VOLS")
 EOF
       fi
       verbose "Starting container '${KRUNVM_RUNNER_NAME}' with entrypoint $KRUNVM_RUNNER_ENTRYPOINT"
+      trace "Running: podman run $*"
       podman run "$@"
       ;;
     krunvm)
