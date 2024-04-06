@@ -16,6 +16,12 @@ run_krunvm() {
   buildah unshare krunvm "$@"
 }
 
+_podman_runtime() {
+  _runtime=${KRUNVM_RUNNER_RUNTIME#podman+}
+  [ -z "$_runtime" ] && _runtime="krun"
+  printf %s\\n "$_runtime"
+}
+
 
 # Automatically select a microVM runtime based on the available commands. Set
 # the KRUNVM_RUNNER_RUNTIME variable.
@@ -48,7 +54,7 @@ microvm_runtime() {
   case "$KRUNVM_RUNNER_RUNTIME" in
     podman*)
       check_command podman
-      check_command krun
+      check_command "$(_podman_runtime)"
       ;;
     krunvm)
       check_command krunvm
@@ -143,7 +149,7 @@ microvm_run() {
   case "$KRUNVM_RUNNER_RUNTIME" in
     podman*)
       set -- \
-        --runtime "krun" \
+        --runtime "$(_podman_runtime)" \
         --rm \
         --tty \
         --name "$KRUNVM_RUNNER_NAME" \
