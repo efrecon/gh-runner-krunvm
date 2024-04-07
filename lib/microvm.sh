@@ -161,7 +161,11 @@ microvm_run() {
       if [ -n "$KRUNVM_RUNNER_VOLS" ]; then
         while IFS= read -r mount || [ -n "$mount" ]; do
           if [ -n "$mount" ]; then
-            set -- --volume "${mount}:Z,rw" "$@"
+            if [ -z "$(printf %s\\n "$mount"|cut -d ':' -f 3)" ]; then
+              set -- --volume "${mount}:Z,rw" "$@"
+            else
+              set -- --volume "${mount}" "$@"
+            fi
           fi
         done <<EOF
 $(printf %s\\n "$KRUNVM_RUNNER_VOLS")
