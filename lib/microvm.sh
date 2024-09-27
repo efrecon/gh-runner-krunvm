@@ -182,7 +182,7 @@ EOF
       verbose "Starting microVM '${KRUNVM_RUNNER_NAME}' with entrypoint $KRUNVM_RUNNER_ENTRYPOINT"
       optstate=$(set +o)
       set -m; # Disable job control
-      run_krunvm start "$KRUNVM_RUNNER_NAME" "$RUNNER_ENTRYPOINT" -- "$@" </dev/null &
+      run_krunvm start "$KRUNVM_RUNNER_NAME" "$KRUNVM_RUNNER_ENTRYPOINT" -- "$@" </dev/null &
       KRUNVM_RUNNER_PID=$!
       eval "$optstate"; # Restore options
       printf %d\\n "$KRUNVM_RUNNER_PID" > "${KRUNVM_RUNNER_STORAGE}/${KRUNVM_RUNNER_NAME}.pid"
