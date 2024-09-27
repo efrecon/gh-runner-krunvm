@@ -67,6 +67,9 @@ check_command() {
     esac
   done
   shift $((OPTIND-1))
+  if [ -z "$1" ]; then
+    error "No command specified for checking"
+  fi
   trace "Checking $1 is an accessible command"
   if ! command -v "$1" >/dev/null 2>&1; then
     if is_true "$_hard"; then
