@@ -31,6 +31,8 @@ RUNNER_ROOTDIR=$( cd -P -- "$(dirname -- "$(command -v -- "$(abspath "$0")")")" 
 
 # shellcheck source=lib/common.sh
 . "$RUNNER_ROOTDIR/lib/common.sh"
+# shellcheck source=lib/microvm.sh
+. "$RUNNER_ROOTDIR/lib/microvm.sh"
 
 # Level of verbosity, the higher the more verbose. All messages are sent to the
 # stderr.
@@ -115,11 +117,15 @@ RUNNER_SECRET=${RUNNER_SECRET:-"$(random_string)"}
 # Number of seconds after which to terminate (empty for never, the good default)
 RUNNER_TERMINATE=${RUNNER_TERMINATE:-""}
 
+# Runtime to use when managing microVMs.
+RUNNER_RUNTIME=${RUNNER_RUNTIME:-""}
+
+
 # shellcheck disable=SC2034 # Used in sourced scripts
 KRUNVM_RUNNER_DESCR="Create runners forever using krunvm"
 
 
-while getopts "c:d:D:g:G:i:l:L:m:M:p:k:r:s:S:T:u:Uvh-" opt; do
+while getopts "c:d:D:g:G:i:l:L:m:M:p:k:r:R:s:S:T:u:Uvh-" opt; do
   case "$opt" in
     c) # Number of CPUs to allocate to the VM
       RUNNER_CPUS="$OPTARG";;
@@ -151,6 +157,8 @@ while getopts "c:d:D:g:G:i:l:L:m:M:p:k:r:s:S:T:u:Uvh-" opt; do
       RUNNER_TERMINATE="$OPTARG";;
     r) # Number of times to repeat the runner loop
       RUNNER_REPEAT="$OPTARG";;
+    R) # Runtime to use when managing microVMs
+      RUNNER_RUNTIME="$OPTARG";;
     s) # Scope of the runner, one of repo, org or enterprise
       RUNNER_SCOPE="$OPTARG";;
     S) # Secret to be used to request for loop end
@@ -186,9 +194,7 @@ fi
 # synchronisation files.
 RUNNER_VM_ENVDIR="_environment"
 
-if [ -z "$RUNNER_PAT" ]; then
-  error "You need to specify a PAT to acquire the runner token with"
-fi
+[ -z "$RUNNER_PAT" ] && error "You need to specify a PAT to acquire the runner token with"
 check_positive_number "$RUNNER_CPUS" "Number of vCPUs"
 check_positive_number "$RUNNER_MEMORY" "Memory (in MB)"
 
@@ -201,38 +207,19 @@ else
   RUNNER_ENTRYPOINT=${RUNNER_DIR%/}/runner/entrypoint.sh
 fi
 
-# Create the VM used for orchestration. Add --volume options for all necessary
-# mappings, i.e. inheritance of "live" code, environment isolation and all
-# requested mount points.
-vm_create() {
-  verbose "Creating microVM '${RUNNER_PREFIX}-$1', $RUNNER_CPUS vCPUs, ${RUNNER_MEMORY}M memory"
-  # Note: reset arguments!
-  set -- \
-    --cpus "$RUNNER_CPUS" \
-    --mem "$RUNNER_MEMORY" \
-    --dns "$RUNNER_DNS" \
-    --name "${RUNNER_PREFIX}-$1"
-  if [ -n "${RUNNER_DIR:-}" ]; then
-    set -- "$@" --volume "${RUNNER_ROOTDIR}:${RUNNER_DIR}"
-  fi
-  if [ -n "${RUNNER_ENVIRONMENT:-}" ]; then
-    set -- "$@" --volume "${RUNNER_ENVIRONMENT}:/${RUNNER_VM_ENVDIR}"
-  fi
-  if [ -n "$RUNNER_MOUNT" ]; then
-    while IFS= read -r mount || [ -n "$mount" ]; do
-      if [ -n "$mount" ]; then
-        set -- "$@" --volume "$mount"
-      fi
-    done <<EOF
-$(printf %s\\n "$RUNNER_MOUNT")
-EOF
-  fi
-  run_krunvm create "$RUNNER_IMAGE" "$@"
-}
+# Pass the runtime to the microvm script
+microvm_runtime "$RUNNER_RUNTIME"
 
 
-vm_start() {
-  _id=$1
+# Call the microvm_run function with the necessary arguments to start a runner
+vm_run() {
+  _id=$1;  # Remember the ID for later
+
+  # First prepare the arguments that will be sent to the entrypoint.sh script.
+  # When an isolation environment can be constructed, create such a file and
+  # pass all relevant content through the file -- and point to the environment
+  # file that was created. Whenever this isn't possible, pass all relevant
+  # options one-by-one.
   if [ -n "$RUNNER_ENVIRONMENT" ]; then
     # Create an env file with most of the RUNNER_ variables. This works because
     # the `runner.sh` script that will be called uses the same set of variables.
@@ -268,19 +255,38 @@ EOF
       set -- -v "$@"
     done
   fi
-  verbose "Starting microVM '${RUNNER_PREFIX}-$_id' with entrypoint $RUNNER_ENTRYPOINT"
-  optstate=$(set +o)
-  set -m; # Disable job control
-  run_krunvm start "${RUNNER_PREFIX}-$_id" "$RUNNER_ENTRYPOINT" -- "$@" </dev/null &
-  RUNNER_PID=$!
-  eval "$optstate"; # Restore options
-  verbose "Started microVM '${RUNNER_PREFIX}-$_id' with PID $RUNNER_PID"
-  if [ -n "$RUNNER_TERMINATE" ]; then
-    verbose "Terminating runner in $RUNNER_TERMINATE seconds"
-    sleep "$RUNNER_TERMINATE" && cleanup &
+
+  # Add image to create from
+  set -- -- "$RUNNER_IMAGE" "$@"
+
+  # Create the VM used for orchestration. Add -v (volumes) options for all
+  # necessary mappings, i.e. inheritance of "live" code, environment isolation
+  # and all requested mount points.
+  set -- \
+    -c "$RUNNER_CPUS" \
+    -m "$RUNNER_MEMORY" \
+    -d "$RUNNER_DNS" \
+    -n "${RUNNER_PREFIX}-$_id" \
+    -e "$RUNNER_ENTRYPOINT" \
+    "$@"
+  if [ -n "${RUNNER_DIR:-}" ]; then
+    set -- -v "${RUNNER_ROOTDIR}:${RUNNER_DIR}" "$@"
   fi
-  wait "$RUNNER_PID"
-  RUNNER_PID=
+  if [ -n "${RUNNER_ENVIRONMENT:-}" ]; then
+    set -- -v "${RUNNER_ENVIRONMENT}:/${RUNNER_VM_ENVDIR}" "$@"
+  fi
+  if [ -n "$RUNNER_MOUNT" ]; then
+    while IFS= read -r mount || [ -n "$mount" ]; do
+      if [ -n "$mount" ]; then
+        set -- -v "$mount" "$@"
+      fi
+    done <<EOF
+$(printf %s\\n "$RUNNER_MOUNT")
+EOF
+  fi
+
+  trace "Running microVM with: $*"
+  microvm_run "$@"
 }
 
 
@@ -288,50 +294,39 @@ vm_delete() {
   # This is just a safety measure, the runner script should already have deleted
   # the environment
   if [ -n "$RUNNER_ENVIRONMENT" ] && [ -f "${RUNNER_ENVIRONMENT}/${1}.env" ]; then
-    warning "Removing isolation environment ${RUNNER_ENVIRONMENT}/${1}.env"
+    warn "Removing isolation environment ${RUNNER_ENVIRONMENT}/${1}.env"
     rm -f "${RUNNER_ENVIRONMENT}/${1}.env"
   fi
-  if run_krunvm list | grep -qE "^${RUNNER_PREFIX}-$1"; then
+  if microvm_list | grep -qE "^${RUNNER_PREFIX}-$1"; then
     verbose "Removing microVM '${RUNNER_PREFIX}-$1'"
-    run_krunvm delete "${RUNNER_PREFIX}-$1"
+    microvm_delete "${RUNNER_PREFIX}-$1"
   fi
 }
 
 vm_terminate() {
-  if [ -n "$RUNNER_ENVIRONMENT" ]; then
-    if [ -f "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.tkn" ]; then
-      if [ -n "${RUNNER_SECRET:-}" ]; then
-        verbose "Requesting termination via ${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
-        printf %s\\n "$RUNNER_SECRET" > "${RUNNER_ENVIRONMENT}/${RUNNER_ID}.trm"
-      elif [ -n "$RUNNER_PID" ]; then
-        kill_tree "$RUNNER_PID"
-      fi
-      if [ "$RUNNER_PID" ]; then
-        # shellcheck disable=SC2046 # We want to wait for all children
-        waitpid $(ps_tree "$RUNNER_PID"|tac)
-      else
-        warning "No PID to wait for"
-      fi
-    elif [ -n "$RUNNER_PID" ]; then
-      kill_tree "$RUNNER_PID"
-      # shellcheck disable=SC2046 # We want to wait for all children
-      waitpid $(ps_tree "$RUNNER_PID"|tac)
-    fi
-  elif [ -n "$RUNNER_PID" ]; then
-    kill_tree "$RUNNER_PID"
-    # shellcheck disable=SC2046 # We want to wait for all children
-    waitpid $(ps_tree "$RUNNER_PID"|tac)
+  # Request for termination through .trm file, whenever possible. Otherwise,
+  # just stop the VM.
+  if [ -n "$RUNNER_ENVIRONMENT" ] \
+      && [ -f "${RUNNER_ENVIRONMENT}/${1}.tkn" ] \
+      && [ -n "${RUNNER_SECRET:-}" ]; then
+    verbose "Requesting termination via ${RUNNER_ENVIRONMENT}/${1}.trm"
+    printf %s\\n "$RUNNER_SECRET" > "${RUNNER_ENVIRONMENT}/${1}.trm"
+    microvm_wait "${RUNNER_PREFIX}-$1"
+  else
+    microvm_stop "${RUNNER_PREFIX}-$1"
   fi
 }
 
+
 cleanup() {
   trap '' EXIT
-  if [ -n "${RUNNER_PID:-}" ]; then
-    vm_terminate
-  fi
+
   if [ -n "${RUNNER_ID:-}" ]; then
+    vm_terminate "$RUNNER_ID"
     vm_delete "$RUNNER_ID"
   fi
+
+  microvm_cleanup
 }
 
 trap cleanup EXIT
@@ -339,9 +334,19 @@ trap cleanup EXIT
 
 iteration=0
 while true; do
+  # Prefetch, since this might take time and we want to be ready to count away
+  # download time from the termination setting.
+  microvm_pull "$RUNNER_IMAGE"
+
+  # Terminate in xx seconds. This is mostly used for demo purposes, but might
+  # help keeping the machines "warm" and actualised (as per the pull above).
+  if [ -n "$RUNNER_TERMINATE" ]; then
+    verbose "Terminating runner in $RUNNER_TERMINATE seconds"
+    sleep "$RUNNER_TERMINATE" && cleanup &
+  fi
+
   RUNNER_ID="${loop}-$(random_string)"
-  vm_create "${RUNNER_ID}"
-  vm_start "${RUNNER_ID}"
+  vm_run "${RUNNER_ID}"
   vm_delete "${RUNNER_ID}"
   RUNNER_ID=
 

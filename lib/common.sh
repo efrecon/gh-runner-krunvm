@@ -51,9 +51,33 @@ usage() {
 }
 
 check_command() {
+  OPTIND=1
+  _hard=1
+  _warn=0
+  while getopts "sw-" _opt; do
+    case "$_opt" in
+      s) # Soft check, return an error code instead of exiting
+        _hard=0;;
+      w) # Print a warning when soft checking
+        _warn=1;;
+      -) # End of options, everything after is the command
+        break;;
+      ?)
+        error "$_opt is an unrecognised option";;
+    esac
+  done
+  shift $((OPTIND-1))
+  if [ -z "$1" ]; then
+    error "No command specified for checking"
+  fi
   trace "Checking $1 is an accessible command"
   if ! command -v "$1" >/dev/null 2>&1; then
-    error "Command not found: $1"
+    if is_true "$_hard"; then
+      error "Command not found: $1"
+    elif is_true "$_warn"; then
+      warn "Command not found: $1"
+    fi
+    return 1
   fi
 }
 
@@ -69,11 +93,6 @@ get_env() (
     fi
   fi
 )
-
-run_krunvm() {
-  debug "Running krunvm $*"
-  buildah unshare krunvm "$@"
-}
 
 tac() {
   awk '{ buffer[NR] = $0; } END { for(i=NR; i>0; i--) { print buffer[i] } }'

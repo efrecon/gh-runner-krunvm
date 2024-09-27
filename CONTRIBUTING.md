@@ -67,3 +67,25 @@ Instead, pass `-D /local` to the [`runner.sh`](./runner.sh) script. This will
 mount the [`runner`](./runner/) directory into the microVM at `/local` and run
 the scripts that it contains from there instead. Which "entrypoint" to use is
 driven by the `RUNNER_ENTRYPOINT` variable in [`runner.sh`](./runner.sh).
+
+## Cleanup
+
+During development, many images might be created. To clean them away, you can
+run one of the following commands.
+
+When using the `krunvm` runtime:
+
+```bash
+buildah rmi $(buildah images --format '{{.ID}}')
+```
+
+When using `podman+krun`:
+
+```bash
+podman image rm $(podman images -q)
+```
+
+> [!WARNING]
+> These commands will remove all unused images on your system. Make sure you
+> don't need any of these images for other projects before running the cleanup.
+> You may need to rebuild images for this project after cleanup.
