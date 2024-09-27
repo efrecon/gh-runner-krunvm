@@ -32,6 +32,8 @@ _microvm_runtime_auto() {
   elif check_command -s -- krunvm; then
     check_command buildah
     KRUNVM_RUNNER_RUNTIME="krunvm"
+  else
+    error "No suitable runtime found. Please install 'krun' or 'krunvm'"
   fi
   info "Automatically selected $KRUNVM_RUNNER_RUNTIME to handle microVMs"
 }
