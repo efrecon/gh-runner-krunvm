@@ -234,7 +234,7 @@ microvm_stop() {
 
   case "$KRUNVM_RUNNER_RUNTIME" in
     podman*)
-      # TODO: Specify howlog to wait between TERM and KILL?
+      # TODO: Specify how long to wait between TERM and KILL?
       podman stop "$1";;
     krunvm)
       KRUNVM_RUNNER_PID=$(cat "${KRUNVM_RUNNER_STORAGE}/$1.pid")
