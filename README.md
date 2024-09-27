@@ -90,7 +90,8 @@ UNIX binary utilities. PRs are welcome to make the project work on MacOS, if it
 does not already.
 
 Apart from the standard UNIX binary utilities, you will need the following
-installed on the host. Installation is easiest on Fedora
+installed on the host. Installation is easiest on Fedora (see original [issue]
+for installation on older versions).
 
 + `curl`
 + `jq`
@@ -102,6 +103,7 @@ Note: When opting for `krunvm`, you do not need `podman`.
 
   [built]: ./.github/workflows/ci.yml
   [requirements]: https://github.com/containers/krunvm#installation
+  [issue]: https://github.com/efrecon/gh-runner-krunvm/issues/22
 
 ## GitHub Token
 
