@@ -71,7 +71,7 @@ driven by the `RUNNER_ENTRYPOINT` variable in [`runner.sh`](./runner.sh).
 ## Cleanup
 
 During development, many images might be created. To clean them away, you can
-run the following:
+run the following command when using the `krunvm` runtime, or `podman image rm`:
 
 ```bash
 buildah rmi $(buildah images --format '{{.ID}}')

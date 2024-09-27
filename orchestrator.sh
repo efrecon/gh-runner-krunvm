@@ -62,7 +62,7 @@ ORCHESTRATOR_SLEEP=${ORCHESTRATOR_SLEEP:-"30"}
 ORCHESTRATOR_RUNTIME=${ORCHESTRATOR_RUNTIME:-""}
 
 # shellcheck disable=SC2034 # Used in sourced scripts
-KRUNVM_RUNNER_DESCR="Run krunvm-based GitHub runners on a single host"
+KRUNVM_RUNNER_DESCR="Run libkrun-based GitHub runners on a single host"
 
 
 while getopts "s:Il:n:p:R:vh-" opt; do
@@ -77,7 +77,7 @@ while getopts "s:Il:n:p:R:vh-" opt; do
       ORCHESTRATOR_RUNNERS="$OPTARG";;
     p) # Prefix to use for the VM name
       ORCHESTRATOR_PREFIX="$OPTARG";;
-    R) # Runtime to use when managing microVMs
+    R) # Runtime to use when managing microVMs, podman+krun or krunvm. Empty==first available
       ORCHESTRATOR_RUNTIME="$OPTARG";;
     v) # Increase verbosity, will otherwise log on errors/warnings only
       ORCHESTRATOR_VERBOSE=$((ORCHESTRATOR_VERBOSE+1));;

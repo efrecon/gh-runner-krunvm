@@ -1,20 +1,24 @@
 # krunvm-based GitHub Runner(s)
 
 This project creates [self-hosted][self] (ephemeral) GitHub [runners] based on
-[krunvm]. [krunvm] creates [microVM]s, so the project enables fully isolated
+[libkrun]. [libkrun] creates [microVM]s, so the project enables fully isolated
 [runners] inside your infrastruture. MicroVMs boot fast, providing an experience
-close to running containers. [krunvm] creates and starts VMs based on the
+close to running containers. [libkrun] creates and starts VMs based on the
 multi-platform OCI images created for this project -- [ubuntu] (default) or
-[fedora].
+[fedora]. The project will create [microVM]s using either [krunvm] or
+[krun][crun] and [podman].
 
 ![Demo](./demo/demo.gif)
 
   [self]: https://docs.github.com/en/actions/hosting-your-own-runners/managing-self-hosted-runners/about-self-hosted-runners
   [runners]: https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners/about-github-hosted-runners
+  [libkrun]: https://github.com/containers/libkrun
   [krunvm]: https://github.com/containers/krunvm
   [microVM]: https://github.com/infracloudio/awesome-microvm
   [ubuntu]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-ubuntu
   [fedora]: https://github.com/efrecon/gh-runner-krunvm/pkgs/container/runner-krunvm-fedora
+  [crun]: https://github.com/containers/crun
+  [podman]: https://github.com/containers/podman
 
 ## Example
 
@@ -68,6 +72,7 @@ starting with `RUNNER_` will affect the behaviour of each [runner] (loop).
   critical software tools.
 + Good compatibility with the regular GitHub [runners]: same user ID, member of
   the `docker` group, password-less `sudo`, etc.
++ Supports both [krunvm] or the [krun][crun] runtime under [podman].
 + In theory, the main [ubuntu] and [fedora] images should be able to be used in
   more traditional container-based solutions -- perhaps [sysbox]? Reports and/or
   changes are welcome.
@@ -89,10 +94,11 @@ installed on the host. Installation is easiest on Fedora
 
 + `curl`
 + `jq`
-+ `buildah`
-+ `krunvm` (and its [requirements])
++ A compatible runtime, i.e. either:
+  + `krun` and [`podman`][podman].
+  + `krunvm`, its [requirements] and `buildah`
 
-Note: You do not need `podman`.
+Note: When opting for `krunvm`, you do not need `podman`.
 
   [built]: ./.github/workflows/ci.yml
   [requirements]: https://github.com/containers/krunvm#installation
@@ -129,9 +135,9 @@ permissions.
 The [orchestrator] creates as many loops of ephemeral runners as requested.
 These loops are implemented as part of the [runner.sh][runner] script: the
 script will create a microVM based on the default image (see below), memory and
-vCPU requirement. It will then start that microVM using `krunvm` and that will
-start an (ephemeral) GitHub [runner][self]. As soon as a job has been executed
-on that runner, the microVM will end and a new will be created.
+vCPU requirement. It will then start that microVM using `krunvm` or `podman` and
+the VM will start an (ephemeral) GitHub [runner][self]. As soon as a job has
+been executed on that runner, the microVM will end and a new will be created.
 
 The OCI image is built in two parts:
 
