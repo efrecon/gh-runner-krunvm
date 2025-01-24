@@ -21,7 +21,7 @@ on:
         description: 'Runner to use'
         required: false
         type: string
-        default: 'ubuntu-latest'
+        default: 'ubuntu-24.04'
       platforms:
         description: 'Platforms to build for, comma separated list of arch/os pairs'
         required: false
